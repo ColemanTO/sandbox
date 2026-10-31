@@ -1,0 +1,30 @@
+{
+  "name": "@colemanto/ng-a11y",
+  "version": "0.0.1",
+  "description": "Accessible Angular components (WCAG-minded toast/snackbar and more).",
+  "keywords": [
+    "angular",
+    "accessibility",
+    "a11y",
+    "toast",
+    "snackbar",
+    "wcag"
+  ],
+  "license": "MIT",
+  "author": "Tom Coleman",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ColemanTO/ngA11y.git"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "peerDependencies": {
+    "@angular/common": "^22.2.0",
+    "@angular/core": "^22.2.0"
+  },
+  "dependencies": {
+    "tslib": "^2.3.0"
+  },
+  "sideEffects": false
+}

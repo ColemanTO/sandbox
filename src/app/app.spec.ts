@@ -18,6 +18,7 @@ describe('App', () => {
     const fixture = TestBed.createComponent(App);
     await fixture.whenStable();
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('h1')?.textContent).toContain('Hello, sandbox');
+    expect(compiled.querySelector('h1')?.textContent).toContain('@colemanto/ng-a11y');
+    expect(compiled.querySelector('a11y-toast-container')).toBeTruthy();
   });
 });

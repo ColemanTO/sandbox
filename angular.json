@@ -2,7 +2,8 @@
   "$schema": "./node_modules/@angular/cli/lib/config/schema.json",
   "version": 1,
   "cli": {
-    "packageManager": "npm"
+    "packageManager": "npm",
+    "analytics": "53aac6a2-d47c-4e67-879a-6b662125fcbd"
   },
   "newProjectRoot": "projects",
   "projects": {
@@ -64,6 +65,32 @@
         },
         "test": {
           "builder": "@angular/build:unit-test"
+        }
+      }
+    },
+    "ng-a11y": {
+      "projectType": "library",
+      "root": "projects/ng-a11y",
+      "sourceRoot": "projects/ng-a11y/src",
+      "prefix": "a11y",
+      "architect": {
+        "build": {
+          "builder": "@angular/build:ng-packagr",
+          "configurations": {
+            "production": {
+              "tsConfig": "projects/ng-a11y/tsconfig.lib.prod.json"
+            },
+            "development": {
+              "tsConfig": "projects/ng-a11y/tsconfig.lib.json"
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "test": {
+          "builder": "@angular/build:unit-test",
+          "options": {
+            "tsConfig": "projects/ng-a11y/tsconfig.spec.json"
+          }
         }
       }
     }
