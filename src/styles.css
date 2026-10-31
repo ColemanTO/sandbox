@@ -1,1 +1,11 @@
-/* You can add global styles to this file, and also import other style files */
+/* Token CSS (tokens/build/css) is loaded before this file; see angular.json. */
+body {
+  margin: 0;
+  background: var(--a11y-color-surface);
+  color: var(--a11y-color-on-surface);
+  font-family: system-ui, sans-serif;
+}
+:focus-visible {
+  outline: 3px solid var(--a11y-color-focus-ring);
+  outline-offset: 2px;
+}

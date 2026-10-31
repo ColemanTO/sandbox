@@ -25,7 +25,14 @@
                 "input": "public"
               }
             ],
-            "styles": ["src/styles.css"]
+            "styles": [
+              "tokens/build/css/primitives.css",
+              "tokens/build/css/theme-light.css",
+              "tokens/build/css/theme-dark.css",
+              "tokens/build/css/theme-high-contrast.css",
+              "tokens/build/css/components.css",
+              "src/styles.css"
+            ]
           },
           "configurations": {
             "production": {

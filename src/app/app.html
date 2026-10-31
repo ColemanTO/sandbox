@@ -2,6 +2,15 @@
   <h1>&#64;colemanto/ng-a11y</h1>
   <p>Toast / snackbar demo. Use a screen reader to hear the announcements.</p>
 
+  <p class="theme">
+    <label for="theme">Theme</label>
+    <select id="theme" (change)="setTheme($event)">
+      @for (t of themes; track t.value) {
+        <option [value]="t.value" [selected]="t.value === theme()">{{ t.label }}</option>
+      }
+    </select>
+  </p>
+
   <div class="buttons">
     <button type="button" (click)="toast.info('Heads up: this is informational.')">Info</button>
     <button type="button" (click)="toast.success('Your changes were saved.')">Success</button>

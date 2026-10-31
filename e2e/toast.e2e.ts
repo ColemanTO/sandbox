@@ -139,3 +139,73 @@ test.describe('axe (real browser, includes color contrast)', () => {
     expect(results.violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
   });
 });
+
+// Toast background per theme, from tokens/themes/*.json (inverse-surface).
+const themes = [
+  { name: 'light', toastBg: 'rgb(31, 41, 51)', pageBg: 'rgb(255, 255, 255)' },
+  { name: 'dark', toastBg: 'rgb(228, 231, 235)', pageBg: 'rgb(18, 24, 31)' },
+  { name: 'high-contrast', toastBg: 'rgb(255, 255, 255)', pageBg: 'rgb(0, 0, 0)' },
+] as const;
+
+const showEveryToast = async (page: Page) => {
+  for (const name of ['Info', 'Success', 'Warning', 'Error (assertive)', 'With action (persistent)']) {
+    await press(page, name);
+  }
+  await expect(page.locator('a11y-toast-item')).toHaveCount(5);
+};
+
+test.describe('themes', () => {
+  for (const theme of themes) {
+    test.describe(theme.name, () => {
+      test.beforeEach(async ({ page }) => {
+        // No slide-in: axe must not sample colors mid-animation.
+        await page.emulateMedia({ reducedMotion: 'reduce' });
+        await page.getByLabel('Theme').selectOption(theme.name);
+      });
+
+      test('applies the theme to the page and the toast', async ({ page }) => {
+        await expect(page.locator('html')).toHaveAttribute('data-theme', theme.name);
+        await expect(page.locator('body')).toHaveCSS('background-color', theme.pageBg);
+        await press(page, 'Info');
+        await expect(page.locator('a11y-toast-item')).toHaveCSS('background-color', theme.toastBg);
+      });
+
+      test('has no axe violations, including color contrast', async ({ page }) => {
+        await showEveryToast(page);
+        const results = await new AxeBuilder({ page })
+          .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-practice'])
+          .analyze();
+        expect(results.violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
+      });
+    });
+  }
+
+  test('"System" follows the OS dark setting', async ({ page }) => {
+    await page.emulateMedia({ colorScheme: 'dark' });
+    await expect(page.locator('html')).not.toHaveAttribute('data-theme', /.+/);
+    await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(18, 24, 31)');
+  });
+
+  test('"System" follows the OS increased-contrast setting', async ({ page }) => {
+    await page.emulateMedia({ contrast: 'more' });
+    await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(0, 0, 0)');
+  });
+
+  test('an explicit theme wins over the OS setting', async ({ page }) => {
+    await page.emulateMedia({ colorScheme: 'dark' });
+    await page.getByLabel('Theme').selectOption('light');
+    await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(255, 255, 255)');
+  });
+
+  test('a theme set on a subtree reaches the toast tokens', async ({ page }) => {
+    await page.evaluate(() => {
+      const el = document.createElement('div');
+      el.id = 'probe';
+      el.dataset['theme'] = 'dark';
+      el.style.cssText = 'background: var(--a11y-toast-bg)';
+      el.textContent = 'probe';
+      document.body.append(el);
+    });
+    await expect(page.locator('#probe')).toHaveCSS('background-color', 'rgb(228, 231, 235)');
+  });
+});

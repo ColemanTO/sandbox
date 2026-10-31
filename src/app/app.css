@@ -1,3 +1,13 @@
-main { max-width: 640px; margin: 48px auto; padding: 0 16px; font-family: system-ui, sans-serif; }
+main { max-width: 640px; margin: 48px auto; padding: 0 16px; }
+.theme { margin: 0 0 24px; }
+.theme select, button {
+  min-height: 44px;
+  padding: 0 16px;
+  font: inherit;
+  color: var(--a11y-color-on-surface);
+  background: var(--a11y-color-surface);
+  border: 2px solid var(--a11y-color-border);
+  border-radius: var(--a11y-radius-sm);
+  cursor: pointer;
+}
 .buttons { display: flex; flex-wrap: wrap; gap: 8px; }
-button { min-height: 44px; padding: 0 16px; font: inherit; cursor: pointer; }
