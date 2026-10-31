@@ -9,7 +9,10 @@
     "test": "ng test",
     "e2e": "playwright test",
     "e2e:ui": "playwright test --ui",
-    "tokens": "node tokens/build.mjs"
+    "tokens": "npm run tokens:check && node tokens/build.mjs",
+    "tokens:check": "node tokens/check.mjs",
+    "prestart": "npm run tokens",
+    "prebuild": "npm run tokens"
   },
   "private": true,
   "packageManager": "npm@11.21.0",
