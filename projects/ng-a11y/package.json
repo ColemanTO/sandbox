@@ -14,7 +14,12 @@
   "author": "Tom Coleman",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ColemanTO/ngA11y.git"
+    "url": "git+https://github.com/ColemanTO/sandbox.git",
+    "directory": "projects/ng-a11y"
+  },
+  "homepage": "https://github.com/ColemanTO/sandbox/tree/main/projects/ng-a11y#readme",
+  "bugs": {
+    "url": "https://github.com/ColemanTO/sandbox/issues"
   },
   "publishConfig": {
     "access": "public"

@@ -1,0 +1,87 @@
+name: Release
+
+# Publishes @colemanto/ng-a11y to npm when a version tag is pushed, e.g. v0.1.1.
+# See RELEASING.md for the one-time npm setup and the release steps.
+on:
+  push:
+    tags: ['v[0-9]+.[0-9]+.[0-9]+*']
+
+permissions: {}
+
+jobs:
+  test:
+    uses: ./.github/workflows/ci.yml
+    permissions:
+      contents: read
+
+  publish:
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      id-token: write # lets npm trust this workflow (trusted publishing) and sign provenance
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Only release commits that are on main
+        run: |
+          git fetch --no-tags origin main
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "::error::Tag $GITHUB_REF_NAME is not on main. Merge to main first, then tag."
+            exit 1
+          fi
+
+      - name: Check the tag matches the package
+        run: |
+          VERSION=$(node -p "require('./projects/ng-a11y/package.json').version")
+          REPO_URL=$(node -p "require('./projects/ng-a11y/package.json').repository.url")
+          if [ "v$VERSION" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match package version $VERSION"
+            exit 1
+          fi
+          case "$REPO_URL" in
+            *"github.com/$GITHUB_REPOSITORY"*) ;;
+            *) echo "::error::package.json repository ($REPO_URL) must match $GITHUB_REPOSITORY for npm provenance"; exit 1 ;;
+          esac
+          if npm view "@colemanto/ng-a11y@$VERSION" version >/dev/null 2>&1; then
+            echo "::error::@colemanto/ng-a11y@$VERSION is already published"
+            exit 1
+          fi
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+          registry-url: https://registry.npmjs.org
+
+      # Trusted publishing needs npm 11.5.1 or newer.
+      - run: npm install -g npm@11
+
+      - run: npm ci
+
+      - name: Build tokens and library
+        run: npm run build:lib
+
+      - name: Publish to npm (with provenance)
+        run: |
+          # Pre-releases (0.2.0-beta.1) go to the "next" tag so they never become "latest".
+          case "$VERSION" in *-*) DIST_TAG=next ;; *) DIST_TAG=latest ;; esac
+          npm publish ./dist/ng-a11y --access public --provenance --tag "$DIST_TAG"
+
+  github-release:
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          case "$GITHUB_REF_NAME" in *-*) PRERELEASE=--prerelease ;; *) PRERELEASE= ;; esac
+          gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --verify-tag --generate-notes --title "$GITHUB_REF_NAME" $PRERELEASE
