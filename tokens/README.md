@@ -29,3 +29,24 @@ only changes what the semantic tier points at, so a new theme needs no component
 Figma's free plan allows one mode per variable collection, so model each theme as its own
 collection (Light, Dark, High contrast) until you upgrade, or use a plugin such as Tokens Studio.
 The repo is the source of truth; treat Figma as a consumer.
+
+## Build
+
+```bash
+npm run tokens        # writes tokens/build/css/ (gitignored)
+```
+
+| File | Contents |
+| --- | --- |
+| `primitives.css` | Raw values on `:root` |
+| `theme-light.css` | Semantic roles; `:root, [data-theme="light"]` |
+| `theme-dark.css` | `[data-theme="dark"]`, and `prefers-color-scheme: dark` when no `data-theme` is set |
+| `theme-high-contrast.css` | `[data-theme="high-contrast"]`, and `prefers-contrast: more` when no `data-theme` is set |
+| `components.css` | `--a11y-toast-*` etc., referencing the semantic roles with `var()` |
+
+Load order: `primitives`, `theme-light`, `theme-dark`, `theme-high-contrast`, `components`.
+The system-preference rules live in the dark and high-contrast files, so they must come after light,
+and high-contrast must come after dark so `prefers-contrast: more` wins.
+
+Set `data-theme` on `<html>` for an app-wide theme, or on any element to theme just that subtree.
+Leave it unset to follow the operating system.

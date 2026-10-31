@@ -47,3 +47,6 @@ Thumbs.db
 test-results/
 playwright-report/
 blob-report/
+
+# Generated design token CSS
+tokens/build/
