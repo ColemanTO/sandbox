@@ -29,8 +29,10 @@ jobs:
 
       - run: npm ci
 
-      - name: Check design tokens (references, theme parity, contrast)
-        run: npm run tokens:check
+      # Generated CSS is gitignored, so a fresh checkout must build it before anything that loads app styles.
+      # This checks references, theme parity and contrast first, then builds.
+      - name: Check and build design tokens
+        run: npm run tokens
 
       - name: Unit and axe tests (library)
         run: npx ng test ng-a11y --watch=false
