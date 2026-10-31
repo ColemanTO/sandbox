@@ -107,6 +107,14 @@ test.describe('presentation', () => {
     expect(animation).toBe('none');
   });
 
+  test('can be themed with CSS custom properties from outside', async ({ page }) => {
+    await page.addStyleTag({ content: ':root { --a11y-toast-bg: rgb(10, 20, 30); --a11y-toast-error: rgb(1, 2, 3); }' });
+    await press(page, 'Error (assertive)');
+    const toast = page.locator('a11y-toast-item');
+    await expect(toast).toHaveCSS('background-color', 'rgb(10, 20, 30)');
+    await expect(toast).toHaveCSS('border-inline-start-color', 'rgb(1, 2, 3)');
+  });
+
   test('stays inside a phone-sized viewport', async ({ page }) => {
     await page.setViewportSize({ width: 320, height: 640 });
     await press(page, 'With action (persistent)');

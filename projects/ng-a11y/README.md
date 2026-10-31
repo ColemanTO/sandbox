@@ -1,64 +1,107 @@
-# NgA11y
+# @colemanto/ng-a11y
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 22.2.0.
+Accessible Angular components. Currently: a toast / snackbar.
 
-## Code scaffolding
+- Standalone components, signals, `OnPush`. Angular 22+.
+- Tested with unit tests, axe-core, and Playwright in Chromium and WebKit.
+- No dependencies beyond Angular.
 
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
-
-```bash
-ng generate component component-name
-```
-
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+## Install
 
 ```bash
-ng generate --help
+npm install @colemanto/ng-a11y
 ```
 
-## Building
+## Toast
 
-To build the library, run:
+Add the container once, near the root of your app:
+
+```ts
+import { Component } from '@angular/core';
+import { A11yToastContainer } from '@colemanto/ng-a11y';
+
+@Component({
+  selector: 'app-root',
+  imports: [A11yToastContainer],
+  template: `<router-outlet /><a11y-toast-container />`,
+})
+export class App {}
+```
+
+Then show toasts from anywhere:
+
+```ts
+import { inject } from '@angular/core';
+import { A11yToastService } from '@colemanto/ng-a11y';
+
+const toast = inject(A11yToastService);
+
+toast.success('Your changes were saved.');
+toast.error('Could not save your changes.');           // announced assertively
+toast.info('Item deleted.', {
+  duration: 0,                                          // stays until dismissed
+  action: { label: 'Undo', handler: () => restore() },
+});
+```
+
+### API
+
+`A11yToastService`
+
+| Method | Description |
+| --- | --- |
+| `show(config \| message)` | Show a toast. Returns its id. |
+| `info` / `success` / `warning` / `error(message, options?)` | Shortcuts for `show` with a type. |
+| `dismiss(id)` / `dismissAll()` | Remove toasts. |
+| `toasts` | Read-only signal of the toasts currently showing. |
+
+`ToastConfig`
+
+| Option | Default | Description |
+| --- | --- | --- |
+| `message` | required | Text shown and announced. |
+| `type` | `'info'` | `'info' \| 'success' \| 'warning' \| 'error'` |
+| `duration` | `5000` | Milliseconds before auto-dismiss. `0` keeps it until dismissed. |
+| `action` | none | `{ label, handler }`. Running it also dismisses the toast. |
+| `politeness` | `'assertive'` for errors, otherwise `'polite'` | Override how it is announced. |
+
+### Accessibility
+
+- Two live regions (`role="status"` and `role="alert"`) are always in the DOM,
+  because screen readers only announce changes to regions that already exist.
+- The type is announced as text ("Error: ...") and shown as an icon, never by color alone.
+- The timer pauses on hover and while keyboard focus is inside the toast
+  (WCAG 2.2.1 Timing Adjustable). Use `duration: 0` for messages people need time to act on.
+- Escape or the close button dismisses a toast. Controls are at least 44x44px with a visible focus ring.
+- Honors `prefers-reduced-motion` and forced-colors mode.
+
+Automated checks cannot replace testing with a screen reader. Please test with
+the assistive technology your users rely on.
+
+### Theming
+
+Override these CSS custom properties anywhere above the toast (for example on `:root`):
+
+| Variable | Default |
+| --- | --- |
+| `--a11y-toast-bg` | `#1f2933` |
+| `--a11y-toast-fg` | `#ffffff` |
+| `--a11y-toast-radius` | `8px` |
+| `--a11y-toast-focus` | `#ffd24d` |
+| `--a11y-toast-info` / `-success` / `-warning` / `-error` | accent colors for each type |
+
+If you change colors, keep text contrast at 4.5:1 or better.
+
+## Development
 
 ```bash
-ng build ng-a11y
+npm install
+npm start                 # demo app on http://localhost:4200
+ng test ng-a11y           # unit + axe tests
+npm run e2e               # Playwright (Chromium + WebKit)
+ng build ng-a11y          # output in dist/ng-a11y
 ```
 
-This command will compile your project, and the build artifacts will be placed in the `dist/` directory.
+## License
 
-### Publishing the Library
-
-Once the project is built, you can publish your library by following these steps:
-
-1. Navigate to the `dist` directory:
-
-   ```bash
-   cd dist/ng-a11y
-   ```
-
-2. Run the `npm publish` command to publish your library to the npm registry:
-   ```bash
-   npm publish
-   ```
-
-## Running unit tests
-
-To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
-
-```bash
-ng test
-```
-
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+MIT

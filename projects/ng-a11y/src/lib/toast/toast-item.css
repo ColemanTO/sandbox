@@ -1,9 +1,6 @@
 :host {
-  --a11y-toast-bg: #1f2933;
-  --a11y-toast-fg: #ffffff;
-  --a11y-toast-accent: #9aa5b1;
-  --a11y-toast-radius: 8px;
-  --a11y-toast-focus: #ffd24d;
+  /* Consumers theme via --a11y-toast-* variables; the fallbacks are the defaults. */
+  --_accent: var(--a11y-toast-info, #6cb6ff);
 
   display: flex;
   align-items: center;
@@ -11,20 +8,20 @@
   min-width: 280px;
   max-width: min(480px, calc(100vw - 32px));
   padding: 12px 8px 12px 16px;
-  color: var(--a11y-toast-fg);
-  background: var(--a11y-toast-bg);
-  border-inline-start: 6px solid var(--a11y-toast-accent);
-  border-radius: var(--a11y-toast-radius);
+  color: var(--a11y-toast-fg, #ffffff);
+  background: var(--a11y-toast-bg, #1f2933);
+  border-inline-start: 6px solid var(--_accent);
+  border-radius: var(--a11y-toast-radius, 8px);
   box-shadow: 0 4px 16px rgb(0 0 0 / 0.3);
   animation: a11y-toast-in 160ms ease-out;
 }
 
-:host(.a11y-toast--success) { --a11y-toast-accent: #5fd38d; }
-:host(.a11y-toast--warning) { --a11y-toast-accent: #ffc247; }
-:host(.a11y-toast--error)   { --a11y-toast-accent: #ff7b72; }
-:host(.a11y-toast--info)    { --a11y-toast-accent: #6cb6ff; }
+:host(.a11y-toast--success) { --_accent: var(--a11y-toast-success, #5fd38d); }
+:host(.a11y-toast--warning) { --_accent: var(--a11y-toast-warning, #ffc247); }
+:host(.a11y-toast--error)   { --_accent: var(--a11y-toast-error, #ff7b72); }
+:host(.a11y-toast--info)    { --_accent: var(--a11y-toast-info, #6cb6ff); }
 
-.a11y-toast__icon { display: inline-flex; color: var(--a11y-toast-accent); flex: none; }
+.a11y-toast__icon { display: inline-flex; color: var(--_accent); flex: none; }
 .a11y-toast__message { flex: 1; margin: 0; line-height: 1.4; overflow-wrap: anywhere; }
 
 .a11y-toast__button {
@@ -41,7 +38,7 @@
   cursor: pointer;
 }
 .a11y-toast__button:hover { background: rgb(255 255 255 / 0.12); }
-.a11y-toast__button:focus-visible { outline: 3px solid var(--a11y-toast-focus); outline-offset: -3px; }
+.a11y-toast__button:focus-visible { outline: 3px solid var(--a11y-toast-focus, #ffd24d); outline-offset: -3px; }
 .a11y-toast__close { padding: 0; display: inline-flex; align-items: center; justify-content: center; }
 
 .a11y-visually-hidden {
