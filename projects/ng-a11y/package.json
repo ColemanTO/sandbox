@@ -1,6 +1,6 @@
 {
   "name": "@colemanto/ng-a11y",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Accessible Angular components (WCAG-minded toast/snackbar and more).",
   "keywords": [
     "angular",
@@ -26,5 +26,10 @@
   "dependencies": {
     "tslib": "^2.3.0"
   },
-  "sideEffects": false
+  "sideEffects": [
+    "*.css"
+  ],
+  "exports": {
+    "./themes/*": "./themes/*"
+  }
 }

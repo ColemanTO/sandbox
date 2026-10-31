@@ -3,11 +3,16 @@
 //   build/css/primitives.css      raw values, on :root
 //   build/css/theme-<name>.css    semantic roles per theme (references primitives)
 //   build/css/components.css      component tokens (references semantic roles)
+//   build/css/all.css             all of the above in the correct load order
+//
+// The CSS is also copied into projects/ng-a11y/themes/ because ng-packagr can only
+// package assets from inside the library's own folder.
 //
 // Components reference semantic variables with var(), so switching a theme
 // only needs the theme's selector to match; no component CSS changes.
 import StyleDictionary from 'style-dictionary';
 import { formattedVariables } from 'style-dictionary/utils';
+import { cpSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
@@ -103,3 +108,17 @@ await build({
   // declared, so component tokens must be re-declared wherever a theme can change.
   options: { rules: [{ selector: ':root, [data-theme]' }] },
 });
+
+// One file with everything, in the order the cascade needs (see tokens/README.md).
+const order = ['primitives', ...Object.keys(themes).map((t) => `theme-${t}`), 'components'];
+const strip = (css) => css.replace(banner, '').trim();
+writeFileSync(
+  join(buildPath, 'all.css'),
+  banner + order.map((f) => strip(readFileSync(join(buildPath, `${f}.css`), 'utf8'))).join('\n\n') + '\n',
+);
+console.log('  all            -> build/css/all.css');
+
+const libThemes = join(root, '../projects/ng-a11y/themes');
+mkdirSync(libThemes, { recursive: true });
+cpSync(buildPath, libThemes, { recursive: true });
+console.log('  copied         -> projects/ng-a11y/themes/');

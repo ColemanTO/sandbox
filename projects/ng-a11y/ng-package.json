@@ -3,5 +3,12 @@
   "dest": "../../dist/ng-a11y",
   "lib": {
     "entryFile": "src/public-api.ts"
-  }
+  },
+  "assets": [
+    {
+      "input": "themes",
+      "glob": "*.css",
+      "output": "/themes"
+    }
+  ]
 }

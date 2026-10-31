@@ -43,6 +43,7 @@ npm run tokens        # writes tokens/build/css/ (gitignored)
 | `theme-dark.css` | `[data-theme="dark"]`, and `prefers-color-scheme: dark` when no `data-theme` is set |
 | `theme-high-contrast.css` | `[data-theme="high-contrast"]`, and `prefers-contrast: more` when no `data-theme` is set |
 | `components.css` | `--a11y-toast-*` etc., referencing the semantic roles with `var()` |
+| `all.css` | All of the above in the correct order |
 
 Load order: `primitives`, `theme-light`, `theme-dark`, `theme-high-contrast`, `components`.
 The system-preference rules live in the dark and high-contrast files, so they must come after light,
@@ -50,3 +51,10 @@ and high-contrast must come after dark so `prefers-contrast: more` wins.
 
 Set `data-theme` on `<html>` for an app-wide theme, or on any element to theme just that subtree.
 Leave it unset to follow the operating system.
+
+## Shipping
+
+The build also copies the CSS to `projects/ng-a11y/themes/` (gitignored), because ng-packagr only packages
+assets from inside the library folder. `ng-package.json` copies it to `themes/` in the package, and
+`exports` in the library `package.json` exposes it as `@colemanto/ng-a11y/themes/*`.
+Use `npm run build:lib` so tokens are rebuilt before the library.

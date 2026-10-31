@@ -18,7 +18,7 @@ export default defineConfig({
     { name: 'webkit', use: { ...devices['Desktop Safari'] } },
   ],
   webServer: {
-    command: 'npm run tokens && npx ng serve sandbox --port 4200',
+    command: 'npm run build:lib && npx ng serve sandbox --port 4200',
     url: 'http://localhost:4200',
     reuseExistingServer: !process.env['CI'],
     timeout: 120_000,

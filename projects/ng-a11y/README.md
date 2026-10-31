@@ -78,9 +78,40 @@ toast.info('Item deleted.', {
 Automated checks cannot replace testing with a screen reader. Please test with
 the assistive technology your users rely on.
 
-### Theming
+### Themes
 
-Override these CSS custom properties anywhere above the toast (for example on `:root`):
+Ready-made light, dark and high-contrast themes ship in the package. Add them once
+(Angular `styles` array, or `@import` in your global stylesheet):
+
+```css
+@import '@colemanto/ng-a11y/themes/all.css';
+```
+
+Then choose a theme with `data-theme` on `<html>` or on any element:
+
+```html
+<html data-theme="dark">
+```
+
+- `light`, `dark`, `high-contrast` set the theme explicitly.
+- With no `data-theme`, the theme follows the operating system: dark mode gives the
+  dark theme and increased contrast gives high-contrast.
+- A theme on a subtree themes just that subtree. Put `<a11y-toast-container />` inside
+  it if the toasts should match.
+
+`all.css` includes everything in the right order. If you want only some files, load them in this
+order: `primitives`, `theme-light`, `theme-dark`, `theme-high-contrast`, `components`
+(all under `@colemanto/ng-a11y/themes/`). The high-contrast file must come last so
+`prefers-contrast: more` wins.
+
+The themes also define semantic variables you can use for your own UI, such as
+`--a11y-color-surface`, `--a11y-color-on-surface`, `--a11y-color-border` and
+`--a11y-color-focus-ring`. Text pairs meet WCAG AA contrast (AAA in high-contrast).
+
+### Customizing
+
+Without the themes, or on top of them, override these CSS custom properties anywhere above the toast
+(for example on `:root`):
 
 | Variable | Default |
 | --- | --- |
@@ -99,7 +130,7 @@ npm install
 npm start                 # demo app on http://localhost:4200
 ng test ng-a11y           # unit + axe tests
 npm run e2e               # Playwright (Chromium + WebKit)
-ng build ng-a11y          # output in dist/ng-a11y
+npm run build:lib         # tokens + library, output in dist/ng-a11y
 ```
 
 ## License
