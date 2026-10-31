@@ -1,0 +1,13 @@
+{
+  "$description": "Tier 3 - component tokens. Point at semantic roles only, so every theme works with no component changes. Names map to the --a11y-toast-* CSS variables the toast reads.",
+  "toast": {
+    "bg": { "$type": "color", "$value": "{color.inverse-surface}" },
+    "fg": { "$type": "color", "$value": "{color.inverse-on-surface}" },
+    "focus": { "$type": "color", "$value": "{color.inverse-focus-ring}" },
+    "info": { "$type": "color", "$value": "{color.inverse-status.info}" },
+    "success": { "$type": "color", "$value": "{color.inverse-status.success}" },
+    "warning": { "$type": "color", "$value": "{color.inverse-status.warning}" },
+    "error": { "$type": "color", "$value": "{color.inverse-status.error}" },
+    "radius": { "$type": "dimension", "$value": "{radius.md}" }
+  }
+}

@@ -1,0 +1,53 @@
+{
+  "$description": "Tier 1 - raw values. Never used directly by components; themes and components reference these.",
+  "color": {
+    "$type": "color",
+    "neutral": {
+      "0": { "$value": "#ffffff" },
+      "50": { "$value": "#f5f7fa" },
+      "100": { "$value": "#e4e7eb" },
+      "300": { "$value": "#9aa5b1" },
+      "500": { "$value": "#616e7c" },
+      "700": { "$value": "#323f4b" },
+      "800": { "$value": "#1f2933" },
+      "900": { "$value": "#12181f" },
+      "1000": { "$value": "#000000" }
+    },
+    "blue": {
+      "300": { "$value": "#6cb6ff" },
+      "700": { "$value": "#084a8c" },
+      "900": { "$value": "#00376b" }
+    },
+    "green": {
+      "300": { "$value": "#5fd38d" },
+      "700": { "$value": "#1a6b3a" },
+      "900": { "$value": "#0f4a26" }
+    },
+    "amber": {
+      "300": { "$value": "#ffc247" },
+      "700": { "$value": "#8a5a00" },
+      "900": { "$value": "#5c3d00" }
+    },
+    "red": {
+      "300": { "$value": "#ff7b72" },
+      "700": { "$value": "#b3261e" },
+      "900": { "$value": "#7a1712" }
+    },
+    "yellow": {
+      "300": { "$value": "#ffd24d" }
+    }
+  },
+  "radius": {
+    "$type": "dimension",
+    "sm": { "$value": "4px" },
+    "md": { "$value": "8px" },
+    "lg": { "$value": "12px" }
+  },
+  "size": {
+    "$type": "dimension",
+    "touch-target": {
+      "$value": "44px",
+      "$description": "Minimum interactive target size (WCAG 2.5.8 asks for 24px; 44px is the more comfortable AAA target)."
+    }
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "$description": "Tier 2 - semantic roles, high-contrast theme. Targets 7:1 for text (WCAG AAA) and stronger non-text contrast.",
+  "color": {
+    "$type": "color",
+    "surface": { "$value": "{color.neutral.1000}", "$description": "Default page background." },
+    "on-surface": { "$value": "{color.neutral.0}", "$description": "Text and icons on surface." },
+    "inverse-surface": { "$value": "{color.neutral.0}", "$description": "Contrasting surface for transient UI such as toasts." },
+    "inverse-on-surface": { "$value": "{color.neutral.1000}" },
+    "border": { "$value": "{color.neutral.0}" },
+    "focus-ring": { "$value": "{color.yellow.300}", "$description": "Focus indicator on surface. Needs 3:1 against it (WCAG 2.4.11)." },
+    "inverse-focus-ring": { "$value": "{color.blue.900}", "$description": "Focus indicator on inverse-surface." },
+    "status": {
+      "info": { "$value": "{color.blue.300}" },
+      "success": { "$value": "{color.green.300}" },
+      "warning": { "$value": "{color.amber.300}" },
+      "error": { "$value": "{color.red.300}" }
+    },
+    "inverse-status": {
+      "info": { "$value": "{color.blue.900}" },
+      "success": { "$value": "{color.green.900}" },
+      "warning": { "$value": "{color.amber.900}" },
+      "error": { "$value": "{color.red.900}" }
+    }
+  }
+}

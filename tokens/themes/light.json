@@ -1,0 +1,25 @@
+{
+  "$description": "Tier 2 - semantic roles, light theme. Every theme file must define exactly the same token names.",
+  "color": {
+    "$type": "color",
+    "surface": { "$value": "{color.neutral.0}", "$description": "Default page background." },
+    "on-surface": { "$value": "{color.neutral.800}", "$description": "Text and icons on surface." },
+    "inverse-surface": { "$value": "{color.neutral.800}", "$description": "Contrasting surface for transient UI such as toasts." },
+    "inverse-on-surface": { "$value": "{color.neutral.0}" },
+    "border": { "$value": "{color.neutral.500}" },
+    "focus-ring": { "$value": "{color.blue.700}", "$description": "Focus indicator on surface. Needs 3:1 against it (WCAG 2.4.11)." },
+    "inverse-focus-ring": { "$value": "{color.yellow.300}", "$description": "Focus indicator on inverse-surface." },
+    "status": {
+      "info": { "$value": "{color.blue.700}" },
+      "success": { "$value": "{color.green.700}" },
+      "warning": { "$value": "{color.amber.700}" },
+      "error": { "$value": "{color.red.700}" }
+    },
+    "inverse-status": {
+      "info": { "$value": "{color.blue.300}" },
+      "success": { "$value": "{color.green.300}" },
+      "warning": { "$value": "{color.amber.300}" },
+      "error": { "$value": "{color.red.300}" }
+    }
+  }
+}
