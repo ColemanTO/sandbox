@@ -16,14 +16,16 @@ import { A11yToastService } from './toast.service';
   template: `
     <div class="a11y-toast-region" role="status" aria-live="polite" aria-atomic="false">
       @for (t of service.polite(); track t.id) {
-        <a11y-toast-item [toast]="t" (dismissed)="service.dismiss(t.id)" />
+        <a11y-toast-item [toast]="t" (dismissed)="onDismissed(t.id, $event)" />
       }
     </div>
     <div class="a11y-toast-region" role="alert" aria-live="assertive" aria-atomic="false">
       @for (t of service.assertive(); track t.id) {
-        <a11y-toast-item [toast]="t" (dismissed)="service.dismiss(t.id)" />
+        <a11y-toast-item [toast]="t" (dismissed)="onDismissed(t.id, $event)" />
       }
     </div>
+    <!-- No role: it must not become a second "status" region. It only speaks when a toast is dismissed by the user. -->
+    <div class="a11y-announcer" aria-live="polite" aria-atomic="true">{{ service.announcement() }}</div>
   `,
   styles: `
     :host {
@@ -39,8 +41,23 @@ import { A11yToastService } from './toast.service';
     }
     .a11y-toast-region { display: flex; flex-direction: column; gap: 8px; align-items: center; }
     a11y-toast-item { pointer-events: auto; }
+    .a11y-announcer {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      margin: -1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+    }
   `,
 })
 export class A11yToastContainer {
   protected readonly service = inject(A11yToastService);
+
+  protected onDismissed(id: number, reason: 'timeout' | 'user'): void {
+    this.service.dismiss(id);
+    // A timed-out toast was already announced when it appeared; only say something when the user acted.
+    if (reason === 'user') this.service.announce('Notification dismissed');
+  }
 }

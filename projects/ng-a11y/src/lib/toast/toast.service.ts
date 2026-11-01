@@ -6,7 +6,12 @@ export class A11yToastService {
   private nextId = 1;
   private readonly _toasts = signal<readonly Toast[]>([]);
 
+  private readonly _announcement = signal('');
+  private announceTimer: ReturnType<typeof setTimeout> | undefined;
+
   readonly toasts = this._toasts.asReadonly();
+  /** Text for the container's hidden live region. Set by {@link announce}. */
+  readonly announcement = this._announcement.asReadonly();
   readonly polite = computed(() => this._toasts().filter((t) => t.politeness === 'polite'));
   readonly assertive = computed(() => this._toasts().filter((t) => t.politeness === 'assertive'));
 
@@ -47,5 +52,19 @@ export class A11yToastService {
 
   dismissAll(): void {
     this._toasts.set([]);
+  }
+
+  /**
+   * Announces a short message to screen readers without showing it. Used when a toast is dismissed,
+   * because a toast that disappears from under the user's focus would otherwise be silent.
+   */
+  announce(message: string): void {
+    clearTimeout(this.announceTimer);
+    // Clear first so repeating the same message still counts as a change.
+    this._announcement.set('');
+    this.announceTimer = setTimeout(() => {
+      this._announcement.set(message);
+      this.announceTimer = setTimeout(() => this._announcement.set(''), 3000);
+    }, 50);
   }
 }

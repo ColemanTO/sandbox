@@ -289,3 +289,66 @@ test.describe('dark mode switch', () => {
     });
   }
 });
+
+test.describe('dismissing never leaves a screen reader stranded', () => {
+  const activeLabel = (page: Page) =>
+    page.evaluate(() => {
+      const a = document.activeElement as HTMLElement;
+      return a === document.body ? 'BODY' : (a.getAttribute('aria-label') ?? a.textContent ?? '').trim();
+    });
+
+  test('Escape returns focus to the button the user came from', async ({ page }) => {
+    await page.getByRole('button', { name: 'Success', exact: true }).focus();
+    await page.keyboard.press('Enter');
+    await expect(page.locator('a11y-toast-item')).toBeVisible();
+    // Tab from the last demo button into the toast.
+    await page.getByRole('button', { name: 'With action (persistent)' }).focus();
+    await page.keyboard.press('Tab');
+    await expect(page.getByRole('button', { name: 'Dismiss notification' })).toBeFocused();
+    await page.keyboard.press('Escape');
+    await expect(page.locator('a11y-toast-item')).toHaveCount(0);
+    expect(await activeLabel(page)).toBe('With action (persistent)');
+  });
+
+  test('closing with the keyboard keeps focus on the page, not the body', async ({ page }) => {
+    await page.getByRole('button', { name: 'Error (assertive)' }).focus();
+    await page.keyboard.press('Enter');
+    await expect(page.locator('a11y-toast-item')).toBeVisible();
+    await page.keyboard.press('Tab');
+    await page.keyboard.press('Tab');
+    await expect(page.getByRole('button', { name: 'Dismiss notification' })).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect(page.locator('a11y-toast-item')).toHaveCount(0);
+    expect(await activeLabel(page)).not.toBe('BODY');
+  });
+
+  test('Undo returns focus and the result is announced', async ({ page }) => {
+    await page.getByRole('button', { name: 'With action (persistent)' }).focus();
+    await page.keyboard.press('Enter');
+    await expect(page.locator('a11y-toast-item')).toBeVisible();
+    await page.keyboard.press('Tab');
+    await expect(page.getByRole('button', { name: 'Undo', exact: true })).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect(page.getByRole('status')).toContainText('Deletion undone.');
+    expect(await activeLabel(page)).not.toBe('BODY');
+  });
+
+  test('says "Notification dismissed" when the user dismisses, but not when it times out', async ({ page }) => {
+    const announcer = page.locator('.a11y-announcer');
+    await press(page, 'Success');
+    await page.clock.runFor(6000); // times out
+    await expect(page.locator('a11y-toast-item')).toHaveCount(0);
+    await expect(announcer).toHaveText('');
+    await press(page, 'Info');
+    await page.getByRole('button', { name: 'Dismiss notification' }).click();
+    await expect(announcer).toHaveText('Notification dismissed');
+  });
+
+  test('the announcer is hidden visually but available to screen readers', async ({ page }) => {
+    const announcer = page.locator('.a11y-announcer');
+    await expect(announcer).toHaveAttribute('aria-live', 'polite');
+    await expect(announcer).not.toHaveAttribute('aria-hidden', /.*/);
+    const box = await announcer.boundingBox();
+    expect(box!.width).toBeLessThanOrEqual(1);
+  });
+});

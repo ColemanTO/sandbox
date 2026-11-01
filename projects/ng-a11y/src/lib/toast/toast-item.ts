@@ -28,9 +28,9 @@ const TYPE_LABEL: Record<Toast['type'], string> = {
     '[class]': '"a11y-toast a11y-toast--" + toast().type',
     '(mouseenter)': 'pause()',
     '(mouseleave)': 'resume()',
-    '(focusin)': 'pause()',
+    '(focusin)': 'onFocusIn($event)',
     '(focusout)': 'onFocusOut($event)',
-    '(keydown.escape)': 'dismissed.emit()',
+    '(keydown.escape)': 'dismissByUser()',
   },
   template: `
     <span class="a11y-toast__icon" aria-hidden="true">
@@ -57,7 +57,7 @@ const TYPE_LABEL: Record<Toast['type'], string> = {
         {{ action.label }}
       </button>
     }
-    <button type="button" class="a11y-toast__button a11y-toast__close" aria-label="Dismiss notification" (click)="dismissed.emit()">
+    <button type="button" class="a11y-toast__button a11y-toast__close" aria-label="Dismiss notification" (click)="dismissByUser()">
       <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M19 6.4 17.6 5 12 10.6 6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12z"/></svg>
     </button>
   `,
@@ -65,13 +65,16 @@ const TYPE_LABEL: Record<Toast['type'], string> = {
 })
 export class A11yToastItem implements OnInit {
   readonly toast = input.required<Toast>();
-  readonly dismissed = output<void>();
+  /** `timeout` when the timer ran out, `user` for the close button, an action, or Escape. */
+  readonly dismissed = output<'timeout' | 'user'>();
 
   private readonly el = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly destroyRef = inject(DestroyRef);
   private timer: ReturnType<typeof setTimeout> | undefined;
   private remaining = 0;
   private startedAt = 0;
+  /** Where focus was before it moved into this toast, so it can go back there. */
+  private previouslyFocused: HTMLElement | null = null;
 
   protected label = () => TYPE_LABEL[this.toast().type];
 
@@ -92,7 +95,13 @@ export class A11yToastItem implements OnInit {
     if (this.remaining <= 0 || this.timer !== undefined) return;
     if (this.el.nativeElement.matches(':hover')) return;
     this.startedAt = Date.now();
-    this.timer = setTimeout(() => this.dismissed.emit(), this.remaining);
+    this.timer = setTimeout(() => this.dismissed.emit('timeout'), this.remaining);
+  }
+
+  protected onFocusIn(event: FocusEvent): void {
+    const from = event.relatedTarget as HTMLElement | null;
+    if (from && !this.el.nativeElement.contains(from)) this.previouslyFocused = from;
+    this.pause();
   }
 
   protected onFocusOut(event: FocusEvent): void {
@@ -101,6 +110,27 @@ export class A11yToastItem implements OnInit {
 
   protected runAction(handler: () => void): void {
     handler();
-    this.dismissed.emit();
+    this.dismissByUser();
+  }
+
+  protected dismissByUser(): void {
+    this.restoreFocus();
+    this.dismissed.emit('user');
+  }
+
+  /**
+   * Removing the toast would drop focus to the page body and leave a screen reader silent.
+   * Move focus first: back to where the user came from, or else to another toast.
+   */
+  private restoreFocus(): void {
+    const host = this.el.nativeElement;
+    if (!host.contains(host.ownerDocument.activeElement)) return; // focus is elsewhere, nothing to rescue
+    // The regions are the container's direct children; their parent holds every toast, whatever its host tag.
+    const container = host.closest('.a11y-toast-region')?.parentElement;
+    const other = Array.from(container?.querySelectorAll('a11y-toast-item') ?? [])
+      .find((item) => item !== host)
+      ?.querySelector('button');
+    const target = this.previouslyFocused?.isConnected ? this.previouslyFocused : other;
+    target?.focus();
   }
 }

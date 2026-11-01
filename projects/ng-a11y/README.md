@@ -73,6 +73,10 @@ toast.info('Item deleted.', {
 - The timer pauses on hover and while keyboard focus is inside the toast
   (WCAG 2.2.1 Timing Adjustable). Use `duration: 0` for messages people need time to act on.
 - Escape or the close button dismisses a toast. Controls are at least 44x44px with a visible focus ring.
+- When a keyboard user dismisses a toast (close button, Escape, or an action), focus returns to where they
+  were before they tabbed into the toast. Otherwise focus would drop to the page and a screen reader would
+  go silent. The dismissal is also announced ("Notification dismissed"). Toasts that time out are not
+  announced again, since they were announced when they appeared.
 - Honors `prefers-reduced-motion` and forced-colors mode.
 
 Automated checks cannot replace testing with a screen reader. Please test with
