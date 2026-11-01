@@ -1,5 +1,7 @@
 main { max-width: 640px; margin: 48px auto; padding: 0 16px; }
-.theme { margin: 0 0 24px; }
+.theme { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; margin: 0 0 24px; }
+.theme__select { display: inline-flex; align-items: center; gap: 8px; }
+.hint { font-size: 0.875rem; }
 .theme select, button {
   min-height: 44px;
   padding: 0 16px;
@@ -11,3 +13,30 @@ main { max-width: 640px; margin: 48px auto; padding: 0 16px; }
   cursor: pointer;
 }
 .buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.switch { display: inline-flex; align-items: center; gap: 12px; }
+.switch:disabled { cursor: not-allowed; opacity: 0.7; }
+.switch__track {
+  position: relative;
+  flex: none;
+  width: 44px;
+  height: 24px;
+  border: 2px solid var(--a11y-color-border);
+  border-radius: 999px;
+  background: var(--a11y-color-surface);
+}
+.switch__thumb {
+  position: absolute;
+  inset-block-start: 2px;
+  inset-inline-start: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--a11y-color-on-surface);
+  transition: transform 150ms ease;
+}
+.switch[aria-checked='true'] .switch__track { background: var(--a11y-color-status-info); border-color: var(--a11y-color-status-info); }
+.switch[aria-checked='true'] .switch__thumb { background: var(--a11y-color-surface); transform: translateX(20px); }
+@media (prefers-reduced-motion: reduce) {
+  .switch__thumb { transition: none; }
+}

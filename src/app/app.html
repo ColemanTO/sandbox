@@ -2,14 +2,32 @@
   <h1>&#64;colemanto/ng-a11y</h1>
   <p>Toast / snackbar demo. Use a screen reader to hear the announcements.</p>
 
-  <p class="theme">
-    <label for="theme">Theme</label>
-    <select id="theme" (change)="setTheme($event)">
-      @for (t of themes; track t.value) {
-        <option [value]="t.value" [selected]="t.value === theme()">{{ t.label }}</option>
-      }
-    </select>
-  </p>
+  <div class="theme">
+    <button
+      type="button"
+      role="switch"
+      class="switch"
+      [attr.aria-checked]="isDark()"
+      [attr.aria-describedby]="theme() === 'high-contrast' ? 'switch-hint' : null"
+      [disabled]="theme() === 'high-contrast'"
+      (click)="toggleDark()"
+    >
+      <span class="switch__track" aria-hidden="true"><span class="switch__thumb"></span></span>
+      Dark mode
+    </button>
+    @if (theme() === 'high-contrast') {
+      <span id="switch-hint" class="hint">Not available in high contrast.</span>
+    }
+
+    <span class="theme__select">
+      <label for="theme">Theme</label>
+      <select id="theme" (change)="setTheme($event)">
+        @for (t of themes; track t.value) {
+          <option [value]="t.value" [selected]="t.value === theme()">{{ t.label }}</option>
+        }
+      </select>
+    </span>
+  </div>
 
   <div class="buttons">
     <button type="button" (click)="toast.info('Heads up: this is informational.')">Info</button>

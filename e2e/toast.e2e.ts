@@ -209,3 +209,83 @@ test.describe('themes', () => {
     await expect(page.locator('#probe')).toHaveCSS('background-color', 'rgb(228, 231, 235)');
   });
 });
+
+test.describe('dark mode switch', () => {
+  const darkSwitch = (page: Page) => page.getByRole('switch', { name: 'Dark mode' });
+
+  test('is a labelled switch that starts off in a light OS', async ({ page }) => {
+    await expect(darkSwitch(page)).toBeVisible();
+    await expect(darkSwitch(page)).toHaveAttribute('aria-checked', 'false');
+    await expect(page.locator('html')).not.toHaveAttribute('data-theme', /.+/);
+  });
+
+  test('starts on when the OS prefers dark, and tracks OS changes', async ({ page }) => {
+    await page.emulateMedia({ colorScheme: 'dark' });
+    await expect(darkSwitch(page)).toHaveAttribute('aria-checked', 'true');
+    await page.emulateMedia({ colorScheme: 'light' });
+    await expect(darkSwitch(page)).toHaveAttribute('aria-checked', 'false');
+  });
+
+  test('click toggles dark and light, restyles the page and toast, and syncs the Theme menu', async ({ page }) => {
+    await darkSwitch(page).click();
+    await expect(darkSwitch(page)).toHaveAttribute('aria-checked', 'true');
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+    await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(18, 24, 31)');
+    await expect(page.getByLabel('Theme')).toHaveValue('dark');
+    await press(page, 'Info');
+    await expect(page.locator('a11y-toast-item')).toHaveCSS('background-color', 'rgb(228, 231, 235)');
+
+    await darkSwitch(page).click();
+    await expect(darkSwitch(page)).toHaveAttribute('aria-checked', 'false');
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+    await expect(page.getByLabel('Theme')).toHaveValue('light');
+  });
+
+  test('works from the keyboard with Space and Enter', async ({ page }) => {
+    await darkSwitch(page).focus();
+    await page.keyboard.press('Space');
+    await expect(darkSwitch(page)).toHaveAttribute('aria-checked', 'true');
+    await page.keyboard.press('Enter');
+    await expect(darkSwitch(page)).toHaveAttribute('aria-checked', 'false');
+  });
+
+  test('stays in step when the Theme menu changes', async ({ page }) => {
+    await page.getByLabel('Theme').selectOption('dark');
+    await expect(darkSwitch(page)).toHaveAttribute('aria-checked', 'true');
+    await page.getByLabel('Theme').selectOption('light');
+    await expect(darkSwitch(page)).toHaveAttribute('aria-checked', 'false');
+  });
+
+  test('is disabled with an explanation in high contrast', async ({ page }) => {
+    await page.getByLabel('Theme').selectOption('high-contrast');
+    await expect(darkSwitch(page)).toBeDisabled();
+    await expect(darkSwitch(page)).toHaveAccessibleDescription('Not available in high contrast.');
+    await page.getByLabel('Theme').selectOption('light');
+    await expect(darkSwitch(page)).toBeEnabled();
+  });
+
+  test('remembers the choice after a reload', async ({ page }) => {
+    await darkSwitch(page).click();
+    await page.reload();
+    await expect(darkSwitch(page)).toHaveAttribute('aria-checked', 'true');
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  });
+
+  test('has a visible focus indicator', async ({ page }) => {
+    await darkSwitch(page).focus();
+    const outline = await darkSwitch(page).evaluate((el) => getComputedStyle(el).outlineStyle);
+    expect(outline).not.toBe('none');
+  });
+
+  for (const state of ['off', 'on'] as const) {
+    test(`has no axe violations with the switch ${state}`, async ({ page }) => {
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      if (state === 'on') await darkSwitch(page).click();
+      await expect(darkSwitch(page)).toHaveAttribute('aria-checked', state === 'on' ? 'true' : 'false');
+      const results = await new AxeBuilder({ page })
+        .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-practice'])
+        .analyze();
+      expect(results.violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
+    });
+  }
+});
