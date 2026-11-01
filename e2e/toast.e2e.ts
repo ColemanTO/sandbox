@@ -266,6 +266,7 @@ test.describe('dark mode switch', () => {
 
   test('remembers the choice after a reload', async ({ page }) => {
     await darkSwitch(page).click();
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
     await page.reload();
     await expect(darkSwitch(page)).toHaveAttribute('aria-checked', 'true');
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');

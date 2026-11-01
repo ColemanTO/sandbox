@@ -44,16 +44,21 @@ export class App {
       const theme = this.theme();
       if (theme === 'system') this.root.removeAttribute('data-theme');
       else this.root.setAttribute('data-theme', theme);
-      this.storeTheme(theme);
     });
   }
 
   protected setTheme(event: Event): void {
-    this.theme.set((event.target as HTMLSelectElement).value as Theme);
+    this.choose((event.target as HTMLSelectElement).value as Theme);
   }
 
   protected toggleDark(): void {
-    this.theme.set(this.isDark() ? 'light' : 'dark');
+    this.choose(this.isDark() ? 'light' : 'dark');
+  }
+
+  /** Saves immediately, not in the effect, so a quick reload can't lose the choice. */
+  private choose(theme: Theme): void {
+    this.theme.set(theme);
+    this.storeTheme(theme);
   }
 
   private storedTheme(): Theme {
