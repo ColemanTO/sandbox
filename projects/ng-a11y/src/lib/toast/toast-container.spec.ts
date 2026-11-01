@@ -74,6 +74,22 @@ describe('A11yToastContainer', () => {
     expect(service.toasts()).toHaveLength(0);
   });
 
+  it('keeps a toast with an action on screen when no duration is given', () => {
+    service.info('Deleted', { action: { label: 'Undo', handler: () => {} } });
+    fixture.detectChanges();
+    vi.advanceTimersByTime(10 * 60_000);
+    fixture.detectChanges();
+    expect(service.toasts()).toHaveLength(1);
+  });
+
+  it('times out a toast with an action when the app sets a duration', () => {
+    service.info('Deleted', { duration: 3000, action: { label: 'Undo', handler: () => {} } });
+    fixture.detectChanges();
+    vi.advanceTimersByTime(3000);
+    fixture.detectChanges();
+    expect(service.toasts()).toHaveLength(0);
+  });
+
   describe('when dismissed', () => {
     const announcer = () => el().querySelector('.a11y-announcer') as HTMLElement;
 

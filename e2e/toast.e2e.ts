@@ -80,6 +80,13 @@ test.describe('keyboard and actions', () => {
     await expect(toast).toHaveCount(0);
   });
 
+  test('a toast with an action is still there after a long time, with no duration set', async ({ page }) => {
+    await press(page, 'With action (persistent)');
+    await page.clock.runFor(10 * 60_000);
+    await expect(page.locator('a11y-toast-item', { hasText: 'Item deleted.' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Undo', exact: true })).toBeVisible();
+  });
+
   test('action runs, then dismisses its toast', async ({ page }) => {
     await press(page, 'With action (persistent)');
     await page.getByRole('button', { name: 'Undo', exact: true }).click();

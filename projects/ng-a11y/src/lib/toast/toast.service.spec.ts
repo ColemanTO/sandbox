@@ -35,4 +35,29 @@ describe('A11yToastService', () => {
     service.dismissAll();
     expect(service.toasts()).toEqual([]);
   });
+
+  describe('duration defaults', () => {
+    const undo = { label: 'Undo', handler: () => {} };
+
+    it('is 5 seconds for a toast without an action', () => {
+      service.info('Plain');
+      expect(service.toasts()[0].duration).toBe(5000);
+    });
+
+    it('is 0 (stays until dismissed) for a toast with an action', () => {
+      service.info('Deleted', { action: undo });
+      expect(service.toasts()[0].duration).toBe(0);
+    });
+
+    it('lets an explicit duration override both defaults', () => {
+      service.info('Plain', { duration: 0 });
+      service.info('Deleted', { action: undo, duration: 8000 });
+      expect(service.toasts().map((t) => t.duration)).toEqual([0, 8000]);
+    });
+
+    it('applies to every type, including errors with an action', () => {
+      service.error('Failed', { action: { label: 'Retry', handler: () => {} } });
+      expect(service.toasts()[0].duration).toBe(0);
+    });
+  });
 });

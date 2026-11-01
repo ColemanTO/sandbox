@@ -22,7 +22,8 @@ export class A11yToastService {
       id: this.nextId++,
       message: c.message,
       type,
-      duration: c.duration ?? DEFAULT_TOAST_DURATION,
+      // A toast with an action stays until dismissed, so the action can't vanish before it is reachable.
+      duration: c.duration ?? (c.action ? 0 : DEFAULT_TOAST_DURATION),
       politeness: c.politeness ?? (type === 'error' ? 'assertive' : 'polite'),
       action: c.action,
     };

@@ -9,6 +9,11 @@
       "input": "themes",
       "glob": "*.css",
       "output": "/themes"
+    },
+    {
+      "input": ".",
+      "glob": "CHANGELOG.md",
+      "output": "/"
     }
   ]
 }

@@ -39,8 +39,7 @@ const toast = inject(A11yToastService);
 toast.success('Your changes were saved.');
 toast.error('Could not save your changes.');           // announced assertively
 toast.info('Item deleted.', {
-  duration: 0,                                          // stays until dismissed
-  action: { label: 'Undo', handler: () => restore() },
+  action: { label: 'Undo', handler: () => restore() },  // has an action, so it stays until dismissed
 });
 ```
 
@@ -61,7 +60,7 @@ toast.info('Item deleted.', {
 | --- | --- | --- |
 | `message` | required | Text shown and announced. |
 | `type` | `'info'` | `'info' \| 'success' \| 'warning' \| 'error'` |
-| `duration` | `5000` | Milliseconds before auto-dismiss. `0` keeps it until dismissed. |
+| `duration` | `5000`, or `0` if the toast has an `action` | Milliseconds before auto-dismiss. `0` keeps it until dismissed. See [How long toasts stay](#how-long-toasts-stay). |
 | `action` | none | `{ label, handler }`. Running it also dismisses the toast. |
 | `politeness` | `'assertive'` for errors, otherwise `'polite'` | Override how it is announced. |
 
@@ -71,7 +70,7 @@ toast.info('Item deleted.', {
   because screen readers only announce changes to regions that already exist.
 - The type is announced as text ("Error: ...") and shown as an icon, never by color alone.
 - The timer pauses on hover and while keyboard focus is inside the toast
-  (WCAG 2.2.1 Timing Adjustable). Use `duration: 0` for messages people need time to act on.
+  (WCAG 2.2.1 Timing Adjustable). Toasts with an action stay until dismissed; see below.
 - Escape or the close button dismisses a toast. Controls are at least 44x44px with a visible focus ring.
 - When a keyboard user dismisses a toast (close button, Escape, or an action), focus returns to where they
   were before they tabbed into the toast. Otherwise focus would drop to the page and a screen reader would
@@ -81,6 +80,28 @@ toast.info('Item deleted.', {
 
 Automated checks cannot replace testing with a screen reader. Please test with
 the assistive technology your users rely on.
+
+### How long toasts stay
+
+| Toast | Default | Why |
+| --- | --- | --- |
+| No action | Disappears after 5 seconds | It was announced when it appeared, so nothing is lost. |
+| Has an `action` (such as Undo) | **Stays until dismissed** | An action that vanishes on a timer may be gone before a keyboard or screen reader user can reach it (WCAG 2.1.1 Keyboard, 2.2.1 Timing Adjustable). |
+
+You can override either default with `duration`:
+
+```ts
+toast.success('Saved', { duration: 0 });                    // keep a plain toast until dismissed
+toast.info('Deleted', { duration: 8000, action: undoAction }); // give an action toast a timer
+```
+
+If you change a toast with an action to time out, keep the time generous and make sure the same action
+is available somewhere else in your UI. **A toast should never be the only way to do something.**
+Toasts are easy to miss: a keyboard user has to Tab to reach them, and a screen reader user may be
+reading something else when one appears.
+
+> **Upgrading from 0.2.x:** toasts that have an `action` used to disappear after 5 seconds and now stay
+> until dismissed. Set `duration: 5000` on them to keep the old behavior. See the [changelog](CHANGELOG.md).
 
 ### Themes
 

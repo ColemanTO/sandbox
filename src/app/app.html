@@ -36,7 +36,7 @@
     <button type="button" (click)="toast.error('Could not save your changes.')">Error (assertive)</button>
     <button
       type="button"
-      (click)="toast.info('Item deleted.', { duration: 0, action: { label: 'Undo', handler: undo } })"
+      (click)="toast.info('Item deleted.', { action: { label: 'Undo', handler: undo } })"
     >
       With action (persistent)
     </button>
