@@ -66,8 +66,12 @@ toast.info('Item deleted.', {
 
 ### Accessibility
 
-- Two live regions (`role="status"` and `role="alert"`) are always in the DOM,
-  because screen readers only announce changes to regions that already exist.
+- Each toast is announced once, from two hidden live regions (polite, and assertive for errors) that are always in
+  the DOM, because screen readers only announce changes to a live region that already exists. The whole message is
+  written in a single update, so it is not read in pieces or twice. Messages are queued, so several toasts in a row
+  are each heard. A toast with an action says so ("Action available: Undo").
+- The visible toasts are ordinary content in a "Notifications" landmark that appears only while toasts are showing,
+  so screen reader users can jump to them from the landmark list. Set the name with `<a11y-toast-container label="..." />`.
 - The type is announced as text ("Error: ...") and shown as an icon, never by color alone.
 - The timer pauses on hover and while keyboard focus is inside the toast
   (WCAG 2.2.1 Timing Adjustable). Toasts with an action stay until dismissed; see below.

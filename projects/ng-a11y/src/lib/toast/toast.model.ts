@@ -1,5 +1,13 @@
 export type ToastType = 'info' | 'success' | 'warning' | 'error';
 
+/** The word read before a toast's message, so the type is never conveyed by color or an icon alone. */
+export const TOAST_TYPE_LABEL: Record<ToastType, string> = {
+  info: 'Information',
+  success: 'Success',
+  warning: 'Warning',
+  error: 'Error',
+};
+
 export interface ToastAction {
   label: string;
   handler: () => void;

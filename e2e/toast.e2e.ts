@@ -1,6 +1,24 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, Page, test } from '@playwright/test';
 
+
+// Records every non-empty text written to the hidden live regions, so tests can check what a screen reader is
+// told (and that it is told once, as one piece) without depending on how long the text stays on screen.
+const recordAnnouncements = (page: Page) =>
+  page.evaluate(() => {
+    const spoken: Record<string, string[]> = { polite: [], assertive: [] };
+    (window as unknown as { __spoken: typeof spoken }).__spoken = spoken;
+    document.querySelectorAll('.a11y-announcer').forEach((el) => {
+      const kind = el.getAttribute('aria-live')!;
+      new MutationObserver(() => {
+        const text = el.textContent!.trim();
+        if (text) spoken[kind].push(text);
+      }).observe(el, { childList: true, characterData: true, subtree: true });
+    });
+  });
+const spoken = (page: Page, kind: 'polite' | 'assertive') =>
+  page.evaluate((k) => (window as unknown as { __spoken: Record<string, string[]> }).__spoken[k], kind);
+
 const press = (page: Page, name: string) => page.getByRole('button', { name, exact: true }).click();
 
 test.beforeEach(async ({ page }) => {
@@ -9,25 +27,63 @@ test.beforeEach(async ({ page }) => {
 });
 
 test.describe('live regions', () => {
-  test('both regions exist before any toast is shown', async ({ page }) => {
-    await expect(page.getByRole('status')).toBeAttached();
-    await expect(page.getByRole('alert')).toBeAttached();
+  test('both hidden live regions exist before any toast is shown', async ({ page }) => {
+    await expect(page.locator('.a11y-announcer[aria-live="polite"]')).toBeAttached();
+    await expect(page.locator('.a11y-announcer[aria-live="assertive"]')).toBeAttached();
   });
 
-  test('errors are announced in the assertive alert region', async ({ page }) => {
+  test('errors are announced in the assertive region', async ({ page }) => {
+    await recordAnnouncements(page);
     await press(page, 'Error (assertive)');
-    await expect(page.getByRole('alert')).toContainText('Error: Could not save your changes.');
-    await expect(page.getByRole('status')).not.toContainText('Could not save');
+    await expect.poll(() => spoken(page, 'assertive')).toEqual(['Error: Could not save your changes.']);
+    expect(await spoken(page, 'polite')).toEqual([]);
   });
 
-  test('success, info and warning use the polite status region', async ({ page }) => {
+  test('success, info and warning are announced politely, one after another', async ({ page }) => {
+    await recordAnnouncements(page);
     await press(page, 'Success');
     await press(page, 'Info');
     await press(page, 'Warning');
-    const status = page.getByRole('status');
-    await expect(status).toContainText('Success: Your changes were saved.');
-    await expect(status).toContainText('Information: Heads up: this is informational.');
-    await expect(status).toContainText('Warning: Your session expires soon.');
+    await expect.poll(() => spoken(page, 'polite')).toEqual([
+      'Success: Your changes were saved.',
+      'Information: Heads up: this is informational.',
+      'Warning: Your session expires soon.',
+    ]);
+    // ...while the visible toasts are all there, in the order they were shown.
+    await expect(page.locator('a11y-toast-item')).toHaveCount(3);
+  });
+
+  test('a toast is announced once, as one piece of text, not built up piece by piece', async ({ page }) => {
+    await recordAnnouncements(page);
+    await press(page, 'Success');
+    await expect.poll(() => spoken(page, 'polite')).toEqual(['Success: Your changes were saved.']);
+    await page.waitForTimeout(800); // anything that would repeat it has had time to
+    expect(await spoken(page, 'polite')).toEqual(['Success: Your changes were saved.']);
+  });
+
+  test('a toast with an action says that an action is available', async ({ page }) => {
+    await recordAnnouncements(page);
+    await press(page, 'With action (persistent)');
+    await expect
+      .poll(() => spoken(page, 'polite'))
+      .toEqual(['Information: Item deleted. Action available: Undo.']);
+  });
+
+  test('the visible toasts sit in a "Notifications" landmark that exists only while toasts show', async ({ page }) => {
+    const landmark = page.getByRole('region', { name: 'Notifications' });
+    await expect(landmark).toHaveCount(0);
+    await press(page, 'With action (persistent)');
+    await expect(landmark).toBeVisible();
+    await expect(landmark.locator('a11y-toast-item')).toHaveCount(1);
+    await page.getByRole('button', { name: 'Dismiss notification' }).click();
+    await expect(landmark).toHaveCount(0);
+  });
+
+  test('the visible toasts are not live regions, and nothing on the page is a status or alert role', async ({ page }) => {
+    await press(page, 'Success');
+    await expect(page.locator('a11y-toast-item')).toBeVisible();
+    await expect(page.locator('.a11y-toast-region')).not.toHaveAttribute('aria-live', /.*/);
+    await expect(page.locator('[role="status"], [role="alert"]')).toHaveCount(0);
   });
 });
 
@@ -91,7 +147,7 @@ test.describe('keyboard and actions', () => {
     await press(page, 'With action (persistent)');
     await page.getByRole('button', { name: 'Undo', exact: true }).click();
     await expect(page.locator('a11y-toast-item', { hasText: 'Item deleted.' })).toHaveCount(0);
-    await expect(page.getByRole('status')).toContainText('Deletion undone.');
+    await expect(page.locator('a11y-toast-item', { hasText: 'Deletion undone.' })).toBeVisible();
   });
 
   test('toast controls are reachable by Tab and have a visible focus indicator', async ({ page }) => {
@@ -306,12 +362,11 @@ test.describe('dismissing never leaves a screen reader stranded', () => {
     });
 
   test('Escape returns focus to the button the user came from', async ({ page }) => {
-    await page.getByRole('button', { name: 'Success', exact: true }).focus();
+    await page.getByRole('button', { name: 'With action (persistent)' }).focus();
     await page.keyboard.press('Enter');
     await expect(page.locator('a11y-toast-item')).toBeVisible();
-    // Tab from the last demo button into the toast.
-    await page.getByRole('button', { name: 'With action (persistent)' }).focus();
-    await page.keyboard.press('Tab');
+    // The toast is last in the page, so move into it from the button the user came from.
+    await page.getByRole('button', { name: 'Dismiss notification' }).focus();
     await expect(page.getByRole('button', { name: 'Dismiss notification' })).toBeFocused();
     await page.keyboard.press('Escape');
     await expect(page.locator('a11y-toast-item')).toHaveCount(0);
@@ -322,8 +377,7 @@ test.describe('dismissing never leaves a screen reader stranded', () => {
     await page.getByRole('button', { name: 'Error (assertive)' }).focus();
     await page.keyboard.press('Enter');
     await expect(page.locator('a11y-toast-item')).toBeVisible();
-    await page.keyboard.press('Tab');
-    await page.keyboard.press('Tab');
+    await page.getByRole('button', { name: 'Dismiss notification' }).focus();
     await expect(page.getByRole('button', { name: 'Dismiss notification' })).toBeFocused();
     await page.keyboard.press('Enter');
     await expect(page.locator('a11y-toast-item')).toHaveCount(0);
@@ -331,32 +385,34 @@ test.describe('dismissing never leaves a screen reader stranded', () => {
   });
 
   test('Undo returns focus and the result is announced', async ({ page }) => {
+    await recordAnnouncements(page);
     await page.getByRole('button', { name: 'With action (persistent)' }).focus();
     await page.keyboard.press('Enter');
     await expect(page.locator('a11y-toast-item')).toBeVisible();
-    await page.keyboard.press('Tab');
+    await page.getByRole('button', { name: 'Undo', exact: true }).focus();
     await expect(page.getByRole('button', { name: 'Undo', exact: true })).toBeFocused();
     await page.keyboard.press('Enter');
-    await expect(page.getByRole('status')).toContainText('Deletion undone.');
+    await expect.poll(() => spoken(page, 'polite')).toContain('Success: Deletion undone.');
     expect(await activeLabel(page)).not.toBe('BODY');
   });
 
   test('says "Notification dismissed" when the user dismisses, but not when it times out', async ({ page }) => {
-    const announcer = page.locator('.a11y-announcer');
+    await recordAnnouncements(page);
     await press(page, 'Success');
     await page.clock.runFor(6000); // times out
     await expect(page.locator('a11y-toast-item')).toHaveCount(0);
-    await expect(announcer).toHaveText('');
+    expect(await spoken(page, 'polite')).not.toContain('Notification dismissed');
     await press(page, 'Info');
     await page.getByRole('button', { name: 'Dismiss notification' }).click();
-    await expect(announcer).toHaveText('Notification dismissed');
+    await expect.poll(() => spoken(page, 'polite')).toContain('Notification dismissed');
   });
 
   test('the announcer is hidden visually but available to screen readers', async ({ page }) => {
-    const announcer = page.locator('.a11y-announcer');
-    await expect(announcer).toHaveAttribute('aria-live', 'polite');
-    await expect(announcer).not.toHaveAttribute('aria-hidden', /.*/);
-    const box = await announcer.boundingBox();
-    expect(box!.width).toBeLessThanOrEqual(1);
+    for (const kind of ['polite', 'assertive']) {
+      const announcer = page.locator(`.a11y-announcer[aria-live="${kind}"]`);
+      await expect(announcer).not.toHaveAttribute('aria-hidden', /.*/);
+      const box = await announcer.boundingBox();
+      expect(box!.width).toBeLessThanOrEqual(1);
+    }
   });
 });

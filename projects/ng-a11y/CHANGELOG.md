@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- **Changed: how toasts are announced.** A success toast was reported to be read twice by VoiceOver. The visible
+  toast used to be a live region whose content arrived in several DOM updates. Each toast is now announced once,
+  as a single string, through hidden live regions that are always present, and announcements are queued so rapid
+  toasts are not cut off. The visible toasts are no longer `role="status"`/`role="alert"`; they sit in a named
+  "Notifications" landmark (`label` input) that exists only while toasts are showing. A toast with an action
+  announces "Action available: Undo". `service.polite` and `service.assertive` are deprecated (no longer used).
+
 ## 0.3.0
 
 **Behavior change.** A toast with an `action` (such as Undo) now stays until the user dismisses it, instead of

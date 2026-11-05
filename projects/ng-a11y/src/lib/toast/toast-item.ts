@@ -8,14 +8,7 @@ import {
   input,
   output,
 } from '@angular/core';
-import { Toast } from './toast.model';
-
-const TYPE_LABEL: Record<Toast['type'], string> = {
-  info: 'Information',
-  success: 'Success',
-  warning: 'Warning',
-  error: 'Error',
-};
+import { TOAST_TYPE_LABEL, Toast } from './toast.model';
 
 /**
  * A single toast. Pauses its timer while hovered or while focus is inside it,
@@ -76,7 +69,7 @@ export class A11yToastItem implements OnInit {
   /** Where focus was before it moved into this toast, so it can go back there. */
   private previouslyFocused: HTMLElement | null = null;
 
-  protected label = () => TYPE_LABEL[this.toast().type];
+  protected label = () => TOAST_TYPE_LABEL[this.toast().type];
 
   ngOnInit(): void {
     this.remaining = this.toast().duration;

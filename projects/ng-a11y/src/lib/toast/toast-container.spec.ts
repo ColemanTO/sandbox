@@ -17,17 +17,99 @@ describe('A11yToastContainer', () => {
 
   afterEach(() => vi.useRealTimers());
 
-  it('always renders both live regions, even when empty', () => {
-    expect(el().querySelector('[role="status"][aria-live="polite"]')).toBeTruthy();
-    expect(el().querySelector('[role="alert"][aria-live="assertive"]')).toBeTruthy();
+  const polite = () => el().querySelector('.a11y-announcer[aria-live="polite"]') as HTMLElement;
+  const assertive = () => el().querySelector('.a11y-announcer[aria-live="assertive"]') as HTMLElement;
+  const settle = (ms = 60) => {
+    vi.advanceTimersByTime(ms);
+    fixture.detectChanges();
+  };
+
+  it('always renders both hidden live regions, even when empty', () => {
+    expect(polite()).toBeTruthy();
+    expect(assertive()).toBeTruthy();
+    expect(polite().textContent?.trim()).toBe('');
   });
 
-  it('puts errors in the alert region and others in the status region', () => {
+  it('announces errors in the assertive region and everything else in the polite one', () => {
     service.error('Boom');
     service.success('Yay');
     fixture.detectChanges();
-    expect(el().querySelector('[role="alert"]')?.textContent).toContain('Boom');
-    expect(el().querySelector('[role="status"]')?.textContent).toContain('Yay');
+    settle();
+    expect(assertive().textContent).toContain('Error: Boom');
+    expect(polite().textContent).toContain('Success: Yay');
+    expect(assertive().textContent).not.toContain('Yay');
+  });
+
+  it('writes the whole announcement in one update, never in pieces', () => {
+    const seen: string[] = [];
+    const watch = () => seen.push(polite().textContent!.trim());
+    service.success('Your changes were saved.');
+    fixture.detectChanges();
+    for (let i = 0; i < 10; i++) {
+      settle(10);
+      watch();
+    }
+    expect(seen.filter((t) => t)).toEqual(Array(seen.filter((t) => t).length).fill('Success: Your changes were saved.'));
+    expect(seen.some((t) => t === 'Success: Your changes were saved.')).toBe(true);
+  });
+
+  it('tells screen reader users when a toast has an action', () => {
+    service.info('Item deleted.', { action: { label: 'Undo', handler: () => {} } });
+    fixture.detectChanges();
+    settle();
+    expect(polite().textContent).toContain('Information: Item deleted. Action available: Undo.');
+  });
+
+  it('queues announcements instead of dropping one when toasts arrive together', () => {
+    service.success('First');
+    service.success('Second');
+    fixture.detectChanges();
+    settle(60);
+    expect(polite().textContent).toContain('First');
+    settle(450);
+    expect(polite().textContent).toContain('Second');
+  });
+
+  it('empties the live region afterwards, so nothing stale is left behind', () => {
+    service.success('Gone soon');
+    fixture.detectChanges();
+    settle(60);
+    expect(polite().textContent).toContain('Gone soon');
+    settle(4000);
+    expect(polite().textContent?.trim()).toBe('');
+  });
+
+  it('keeps the visible toasts out of any live region', () => {
+    service.success('Visible');
+    service.error('Visible too');
+    fixture.detectChanges();
+    expect(el().querySelectorAll('a11y-toast-item')).toHaveLength(2);
+    const region = el().querySelector('.a11y-toast-region')!;
+    expect(region.getAttribute('aria-live')).toBeNull();
+    expect(region.getAttribute('role')).toBeNull();
+    expect(region.querySelector('[aria-live], [role="status"], [role="alert"]')).toBeNull();
+  });
+
+  it('puts the visible toasts in a named landmark that exists only while toasts are showing', () => {
+    expect(el().querySelector('section')).toBeNull();
+    service.info('Hello', { duration: 0 });
+    fixture.detectChanges();
+    const landmark = el().querySelector('section.a11y-toast-region')!;
+    expect(landmark.getAttribute('aria-label')).toBe('Notifications');
+    (el().querySelector('.a11y-toast__close') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(el().querySelector('section')).toBeNull();
+  });
+
+  it('lists toasts in the order they were shown, whatever their type', () => {
+    service.success('One');
+    service.error('Two');
+    service.info('Three');
+    fixture.detectChanges();
+    const texts = Array.from(el().querySelectorAll('a11y-toast-item')).map((i) => i.textContent!);
+    expect(texts[0]).toContain('One');
+    expect(texts[1]).toContain('Two');
+    expect(texts[2]).toContain('Three');
   });
 
   it('prefixes the type so it is not conveyed by color alone', () => {
@@ -91,7 +173,7 @@ describe('A11yToastContainer', () => {
   });
 
   describe('when dismissed', () => {
-    const announcer = () => el().querySelector('.a11y-announcer') as HTMLElement;
+    const announcer = () => polite();
 
     // jsdom keeps the last focused element around; start every test with nothing focused.
     beforeEach(() => (document.activeElement as HTMLElement | null)?.blur());
@@ -100,20 +182,19 @@ describe('A11yToastContainer', () => {
       service.info('Hello', { duration: 0 });
       fixture.detectChanges();
       (el().querySelector('.a11y-toast__close') as HTMLButtonElement).click();
-      vi.advanceTimersByTime(60);
-      fixture.detectChanges();
+      settle(60);
+      expect(announcer().textContent).toContain('Information: Hello'); // the toast's own announcement goes first
+      settle(450);
       expect(announcer().textContent).toContain('Notification dismissed');
     });
 
     it('does not announce when a toast simply times out', () => {
       service.info('Bye', { duration: 1000 });
       fixture.detectChanges();
-      vi.advanceTimersByTime(1000);
-      fixture.detectChanges();
-      vi.advanceTimersByTime(100);
-      fixture.detectChanges();
+      settle(1000);
       expect(service.toasts()).toHaveLength(0);
-      expect(announcer().textContent?.trim()).toBe('');
+      settle(1000); // plenty of time for any dismissal message to be spoken
+      expect(announcer().textContent).not.toContain('dismissed');
     });
 
     it('keeps the announcer out of the status/alert roles', () => {
