@@ -7,6 +7,9 @@ disappearing after 5 seconds. An action on a timer can vanish before a keyboard 
 it (WCAG 2.1.1, 2.2.1). To keep the old behavior, set `duration: 5000` on those toasts. Toasts without an
 action are unchanged. See "How long toasts stay" in the README.
 
+Also adds the MIT `LICENSE` file to the package (earlier versions only declared the license in `package.json`)
+and an "Accessibility notes and limitations" section to the README.
+
 ## 0.2.0
 
 - Dismissing a toast with the keyboard (close button, Escape or an action) now returns focus to where the user

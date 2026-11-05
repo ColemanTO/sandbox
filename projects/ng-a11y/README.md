@@ -148,6 +148,26 @@ Without the themes, or on top of them, override these CSS custom properties anyw
 
 If you change colors, keep text contrast at 4.5:1 or better.
 
+## Accessibility notes and limitations
+
+This package is built to support accessible use, and it is not a guarantee of conformance. WCAG
+conformance is judged for a whole page or application, so using this component does not by itself make an
+app conformant. It also does not constitute legal advice or a statement of compliance with any law.
+
+**What has been tested**
+
+- Automated: unit tests, [axe-core](https://github.com/dequelabs/axe-core) (in jsdom and in real browsers,
+  including color contrast), and Playwright end-to-end tests in Chromium and WebKit. The shipped themes are
+  checked for WCAG contrast on every build.
+- Manual: the author has tested with VoiceOver on macOS in Safari and Chrome.
+
+**What has not been tested:** Windows screen readers (NVDA, JAWS, Narrator), mobile screen readers
+(VoiceOver on iOS, TalkBack), and Firefox. Screen reader and browser combinations behave differently, so please
+test with the assistive technology your users rely on.
+
+Found a problem? Please [open an issue](https://github.com/ColemanTO/sandbox/issues) and say which
+screen reader, browser and operating system you used.
+
 ## Development
 
 ```bash
@@ -160,4 +180,4 @@ npm run build:lib         # tokens + library, output in dist/ng-a11y
 
 ## License
 
-MIT
+[MIT](LICENSE). The software is provided "as is", without warranty of any kind; see the license for the full terms.

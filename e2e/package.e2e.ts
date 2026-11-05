@@ -15,6 +15,12 @@ test.describe('published package contents', () => {
     expect(pkg.sideEffects).toEqual(['*.css']);
   });
 
+  test('ships the license text and the changelog', () => {
+    expect(readFileSync(`${dist}/LICENSE`, 'utf8')).toContain('Permission is hereby granted');
+    expect(readFileSync(`${dist}/LICENSE`, 'utf8')).toContain('"AS IS"');
+    expect(existsSync(`${dist}/CHANGELOG.md`)).toBe(true);
+  });
+
   const expected = [
     { theme: 'light', bg: 'rgb(31, 41, 51)' },
     { theme: 'dark', bg: 'rgb(228, 231, 235)' },
