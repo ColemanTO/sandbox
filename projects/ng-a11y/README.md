@@ -276,7 +276,6 @@ app conformant. It also does not constitute legal advice or a statement of compl
   including color contrast), and Playwright end-to-end tests in Chromium and WebKit. The shipped themes are
   checked for WCAG contrast on every build.
 - Manual: the author has tested with VoiceOver on macOS in Safari and Chrome.
-  (The error summary has automated tests only so far; see the changelog.)
 
 **What has not been tested:** Windows screen readers (NVDA, JAWS, Narrator), mobile screen readers
 (VoiceOver on iOS, TalkBack), and Firefox. Screen reader and browser combinations behave differently, so please

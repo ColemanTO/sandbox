@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.4.0
 
 - **Changed: how toasts are announced.** A success toast was reported to be read twice by VoiceOver. The visible
   toast used to be a live region whose content arrived in several DOM updates. Each toast is now announced once,
@@ -11,8 +11,8 @@
 
 - **New: `<a11y-error-summary>`.** Lists a form's errors after a failed submit, moves focus to the list, and links
   each entry to its field. Reactive forms; no dependency on `@angular/forms`. See "Error summary" in the README.
-  Tested with unit tests and Playwright (Chromium and WebKit), including axe and theme contrast. Not yet tested by
-  hand with a screen reader.
+  Tested with unit tests and Playwright (Chromium and WebKit), including axe and theme contrast, and by hand with
+  VoiceOver on Safari and Chrome.
 
 ## 0.3.0
 
