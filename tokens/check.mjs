@@ -68,6 +68,10 @@ for (const [theme, tokens] of Object.entries(themes)) {
     ['border on surface', 'color.border', 'color.surface', ui],
     ['focus-ring on surface', 'color.focus-ring', 'color.surface', 3],
     ['toast.focus on toast.bg', 'toast.focus', 'toast.bg', 3],
+    ['error-summary.fg on error-summary.bg', 'error-summary.fg', 'error-summary.bg', text],
+    ['error-summary.link on error-summary.bg', 'error-summary.link', 'error-summary.bg', text],
+    ['error-summary.border on error-summary.bg', 'error-summary.border', 'error-summary.bg', ui],
+    ['error-summary.focus on error-summary.bg', 'error-summary.focus', 'error-summary.bg', 3],
     ...statuses.flatMap((s) => [
       [`status.${s} on surface`, `color.status.${s}`, 'color.surface', ui],
       [`toast.${s} on toast.bg`, `toast.${s}`, 'toast.bg', ui],

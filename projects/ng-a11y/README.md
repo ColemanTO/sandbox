@@ -1,6 +1,6 @@
 # @colemanto/ng-a11y
 
-Accessible Angular components. Currently: a toast / snackbar.
+Accessible Angular components. Currently: a toast / snackbar and a form error summary.
 
 - Standalone components, signals, `OnPush`. Angular 22+.
 - Tested with unit tests, axe-core, and Playwright in Chromium and WebKit.
@@ -152,6 +152,118 @@ Without the themes, or on top of them, override these CSS custom properties anyw
 
 If you change colors, keep text contrast at 4.5:1 or better.
 
+## Error summary
+
+Lists what went wrong after a failed submit and takes the user straight to each problem. It follows the
+error summary pattern from the GOV.UK Design System and works with Angular reactive forms.
+
+Place it **inside the `<form>`**:
+
+```ts
+import { A11yErrorSummary, ErrorMessages } from '@colemanto/ng-a11y';
+
+@Component({
+  imports: [ReactiveFormsModule, A11yErrorSummary],
+  template: `
+    <form [formGroup]="form" (ngSubmit)="save()" novalidate>
+      <a11y-error-summary [form]="form" [messages]="messages" />
+
+      <label for="email">Email</label>
+      <input id="email" formControlName="email" />
+      <!-- ...more fields... -->
+      <button type="submit">Create account</button>
+    </form>
+  `,
+})
+export class SignUp {
+  form = new FormGroup({
+    email: new FormControl('', [Validators.required, Validators.email]),
+  });
+
+  messages: ErrorMessages = {
+    email: { required: 'Enter your email address', email: 'Enter an email address like name@example.com' },
+  };
+}
+```
+
+### What it does
+
+- It stays hidden until the first failed submit. A valid submit shows nothing.
+- After a failed submit it shows a heading ("There is a problem") and one link per invalid field, in the order
+  the fields appear on the page, using your messages.
+- **Focus moves to the summary**, so a screen reader reads it. It is a labelled group, not a live region
+  (`role="alert"` as well would risk being read twice).
+- Activating a link **focuses that field** and does not change the URL.
+- Entries disappear as the user fixes fields. Nothing is announced for each fix, and focus does not move.
+  When every field is fixed the summary goes away and stays away until the next failed submit.
+- A second failed submit moves focus to the summary again.
+- It judges the form as it was when submitted, before your `(ngSubmit)` handler runs. If you save and then
+  `form.reset()`, the summary will not pop back up.
+
+### Messages
+
+You write the messages, because wording that fits your form beats text generated from validator names.
+
+- Keys are control names. For nested groups you can use a dotted path such as `'address.postcode'`, which wins
+  over the bare name `postcode`.
+- A value is either one string for every error on that field, or an object keyed by validator error name
+  (`required`, `email`, `minlength`, ...).
+- A field with no message shows `Check <label>` and logs a warning in development, so nothing is silently blank.
+- Disabled controls are ignored.
+
+| Input | Default | Description |
+| --- | --- | --- |
+| `form` | required | Your `FormGroup`. Anything with the same shape works. This package does not import `@angular/forms`. |
+| `messages` | `{}` | Messages as described above. |
+| `heading` | `There is a problem` | Heading text. |
+| `headingLevel` | `2` | `aria-level` of the heading (2 to 6), so it fits your page outline. |
+
+### Mark up the fields too
+
+The summary points at the problems; the fields should explain them where the user is looking. Show the message
+next to the field, and tie it to the field so a screen reader reads it with the field:
+
+```html
+<input
+  id="email"
+  formControlName="email"
+  [attr.aria-invalid]="error ? 'true' : null"
+  [attr.aria-describedby]="error ? 'email-error' : null"
+/>
+@if (error) {
+  <p id="email-error"><span class="visually-hidden">Error: </span>{{ error }}</p>
+}
+```
+
+The demo app in this repo shows the whole pattern. Show the inline error after the first submit attempt, like the
+summary, not while the person is still typing. Don't rely on color alone to mark an invalid field.
+
+### Limits
+
+- Reactive forms only. Template-driven forms and Signal Forms are not supported yet.
+- Fields are found by `formControlName`. For a custom control, put `formControlName` on an element that is, or
+  contains, something focusable.
+- Errors set on a group as a whole (a cross-field validator such as "passwords must match") are not listed as
+  separate entries. If that is the only problem, the summary shows the line "Check the form for errors". Reword
+  it with the `$form` key in `messages`, and put the explanation next to the fields involved.
+- A native `<button type="reset">` hides the summary. After a programmatic `form.reset()` that follows a *failed*
+  submit, call the component's `clear()` method (get it with `viewChild(A11yErrorSummary)`).
+
+### Customizing the summary
+
+The themes style it. To restyle it yourself, override these CSS custom properties:
+
+| Variable | Default |
+| --- | --- |
+| `--a11y-error-summary-bg` | `#ffffff` |
+| `--a11y-error-summary-fg` | `#1f2933` |
+| `--a11y-error-summary-border` | `#b3261e` |
+| `--a11y-error-summary-link` | `#b3261e` |
+| `--a11y-error-summary-focus` | `#084a8c` |
+| `--a11y-error-summary-radius` | `4px` |
+
+Keep text at 4.5:1 contrast and the border and focus indicator at 3:1.
+
 ## Accessibility notes and limitations
 
 This package is built to support accessible use, and it is not a guarantee of conformance. WCAG
@@ -164,6 +276,7 @@ app conformant. It also does not constitute legal advice or a statement of compl
   including color contrast), and Playwright end-to-end tests in Chromium and WebKit. The shipped themes are
   checked for WCAG contrast on every build.
 - Manual: the author has tested with VoiceOver on macOS in Safari and Chrome.
+  (The error summary has automated tests only so far; see the changelog.)
 
 **What has not been tested:** Windows screen readers (NVDA, JAWS, Narrator), mobile screen readers
 (VoiceOver on iOS, TalkBack), and Firefox. Screen reader and browser combinations behave differently, so please

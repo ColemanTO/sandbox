@@ -1,0 +1,11 @@
+{
+  "$description": "Tier 3 - component tokens for <a11y-error-summary>. Map to the --a11y-error-summary-* CSS variables.",
+  "error-summary": {
+    "bg": { "$type": "color", "$value": "{color.surface}" },
+    "fg": { "$type": "color", "$value": "{color.on-surface}" },
+    "border": { "$type": "color", "$value": "{color.status.error}" },
+    "link": { "$type": "color", "$value": "{color.status.error}" },
+    "focus": { "$type": "color", "$value": "{color.focus-ring}" },
+    "radius": { "$type": "dimension", "$value": "{radius.sm}" }
+  }
+}

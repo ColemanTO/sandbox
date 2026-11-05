@@ -40,3 +40,33 @@ main { max-width: 640px; margin: 48px auto; padding: 0 16px; }
 @media (prefers-reduced-motion: reduce) {
   .switch__thumb { transition: none; }
 }
+
+.signup { margin-block-start: 8px; }
+.field { margin-block-end: 16px; }
+.field label { display: block; margin-block-end: 4px; font-weight: 600; }
+.field input:not([type='checkbox']) {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 44px;
+  padding: 0 12px;
+  font: inherit;
+  color: var(--a11y-color-on-surface);
+  background: var(--a11y-color-surface);
+  border: 2px solid var(--a11y-color-border);
+  border-radius: var(--a11y-radius-sm);
+}
+.field input[aria-invalid='true'] { border-color: var(--a11y-color-status-error); }
+.field--checkbox { display: grid; grid-template-columns: 24px 1fr; align-items: center; column-gap: 8px; }
+.field--checkbox input { width: 24px; height: 24px; margin: 0; }
+.field--checkbox label { margin: 0; font-weight: 400; }
+.field--checkbox .field-error { grid-column: 1 / -1; }
+.field-error { margin: 4px 0 0; color: var(--a11y-color-status-error); font-weight: 600; }
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

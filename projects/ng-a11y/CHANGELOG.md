@@ -9,6 +9,11 @@
   "Notifications" landmark (`label` input) that exists only while toasts are showing. A toast with an action
   announces "Action available: Undo". `service.polite` and `service.assertive` are deprecated (no longer used).
 
+- **New: `<a11y-error-summary>`.** Lists a form's errors after a failed submit, moves focus to the list, and links
+  each entry to its field. Reactive forms; no dependency on `@angular/forms`. See "Error summary" in the README.
+  Tested with unit tests and Playwright (Chromium and WebKit), including axe and theme contrast. Not yet tested by
+  hand with a screen reader.
+
 ## 0.3.0
 
 **Behavior change.** A toast with an `action` (such as Undo) now stays until the user dismisses it, instead of
