@@ -54,3 +54,7 @@ projects/ng-a11y/themes/
 
 *storybook.log
 storybook-static
+
+# SSH deploy key for the demos site (never commit)
+/deploy_key
+/deploy_key.pub
