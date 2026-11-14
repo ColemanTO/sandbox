@@ -72,6 +72,38 @@
         },
         "test": {
           "builder": "@angular/build:unit-test"
+        },
+        "storybook": {
+          "builder": "@storybook/angular-vite:start-storybook",
+          "options": {
+            "configDir": ".storybook",
+            "browserTarget": "sandbox:build",
+            "port": 6006,
+            "styles": [
+              "tokens/build/css/primitives.css",
+              "tokens/build/css/theme-light.css",
+              "tokens/build/css/theme-dark.css",
+              "tokens/build/css/theme-high-contrast.css",
+              "tokens/build/css/components.css",
+              "src/styles.css"
+            ]
+          }
+        },
+        "build-storybook": {
+          "builder": "@storybook/angular-vite:build-storybook",
+          "options": {
+            "configDir": ".storybook",
+            "browserTarget": "sandbox:build",
+            "outputDir": "dist/storybook/sandbox",
+            "styles": [
+              "tokens/build/css/primitives.css",
+              "tokens/build/css/theme-light.css",
+              "tokens/build/css/theme-dark.css",
+              "tokens/build/css/theme-high-contrast.css",
+              "tokens/build/css/components.css",
+              "src/styles.css"
+            ]
+          }
         }
       }
     },

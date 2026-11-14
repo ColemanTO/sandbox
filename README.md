@@ -44,6 +44,19 @@ To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use th
 ng test
 ```
 
+## Storybook
+
+The library's components are shown in Storybook, each with its docs, controls and an accessibility check:
+
+```bash
+npm run storybook        # dev server on http://localhost:6006
+npm run build-storybook  # static site in dist/storybook/sandbox
+```
+
+Stories sit next to their component in `projects/ng-a11y/src/lib/<name>/<name>.stories.ts` and are left out of the
+published package. To add a component, add its stories file with the title `Components/<Name>` and list it in
+`projects/ng-a11y/src/lib/introduction.mdx`. Use the paintbrush in the toolbar to switch theme.
+
 ## Running end-to-end tests
 
 For end-to-end (e2e) testing, run:

@@ -1,0 +1,27 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+
+<Meta title="Introduction" />
+
+# @colemanto/ng-a11y
+
+Accessible Angular components. Each one is built and tested for keyboard and screen reader use first.
+
+## Components
+
+- [Toast](?path=/docs/components-toast--docs): short messages that are announced once to screen readers and never
+  take focus away.
+- [Error summary](?path=/docs/components-error-summary--docs): lists a form's errors after a failed submit and links
+  each one to its field.
+
+## Using this Storybook
+
+- **Theme.** Use the paintbrush in the toolbar to switch between light, dark and high contrast. "System" follows
+  your OS settings, as the components do in an app that sets no `data-theme`.
+- **Accessibility panel.** Every story is checked with axe. Open the Accessibility tab below a story to see the
+  result. axe finds only some problems, so also try each story with the keyboard and a screen reader.
+- **Controls.** Change a story's inputs in the Controls tab.
+
+## Adding a component
+
+Put a `<name>.stories.ts` file next to the component in `projects/ng-a11y/src/lib/<name>/`, with the title
+`Components/<Name>`, and add it to the list above.

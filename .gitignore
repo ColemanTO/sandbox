@@ -51,3 +51,6 @@ blob-report/
 # Generated design token CSS
 tokens/build/
 projects/ng-a11y/themes/
+
+*storybook.log
+storybook-static
