@@ -1,6 +1,6 @@
 # @colemanto/ng-a11y
 
-Accessible Angular components. Currently: a toast / snackbar and a form error summary.
+Accessible Angular components. Currently: a toast / snackbar, a form error summary and a date picker.
 
 - Standalone components, signals, `OnPush`. Angular 22+.
 - Tested with unit tests, axe-core, and Playwright in Chromium and WebKit.
@@ -289,6 +289,77 @@ The themes style it. To restyle it yourself, override these CSS custom propertie
 | `--a11y-error-summary-radius` | `4px` |
 
 Keep text at 4.5:1 contrast and the border and focus indicator at 3:1.
+
+## Date picker
+
+Adds a calendar to a date field the user can also type in. It follows the
+[date picker dialog pattern](https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/examples/datepicker-dialog/)
+from the WAI-ARIA Authoring Practices.
+
+Wrap your own text input, with its own label and a hint that shows the format:
+
+```ts
+import { A11yDatePicker } from '@colemanto/ng-a11y';
+
+@Component({
+  imports: [ReactiveFormsModule, A11yDatePicker],
+  template: `
+    <label for="start">Start date</label>
+    <p id="start-hint">For example, 27/11/2026</p>
+    <a11y-date-picker format="dd/MM/yyyy">
+      <input id="start" formControlName="start" autocomplete="off" aria-describedby="start-hint" />
+    </a11y-date-picker>
+  `,
+})
+```
+
+The input stays yours. The picker reads and writes its text, so it works with reactive forms, template-driven
+forms or no forms at all, and an `<a11y-error-summary>` entry links to the field as usual. The form value is the
+text in the input, such as `27/11/2026`.
+
+### What it does
+
+- A calendar button next to the input opens a dialog. Its name is "Choose date", or "Change date" followed by
+  the date in full once the field has one.
+- The dialog opens on the date in the field, or else today, and moves focus to that day.
+- Choosing a day writes it to the input in `format`, fires `input` and `change` as if it had been typed, closes
+  the dialog and returns focus to the calendar button.
+- Escape, the Close button, or a click outside closes the dialog without changing the field.
+- Tab stays inside the dialog while it is open.
+- A disabled or read-only input disables the calendar button.
+
+| Key | Moves to |
+| --- | --- |
+| Arrow keys | Previous or next day, or the same day in the previous or next week |
+| Home, End | Start or end of the week |
+| Page Up, Page Down | Same day in the previous or next month |
+| Shift + Page Up, Page Down | Same day in the previous or next year |
+| Enter, Space | Chooses the day |
+| Escape | Closes the calendar |
+
+### API
+
+| Input | Default | Description |
+| --- | --- | --- |
+| `format` | `yyyy-MM-dd` | How the date is written in the input, made of `dd`, `MM` and `yyyy`. |
+| `min`, `max` | none | Earliest and latest date that can be chosen, as `yyyy-MM-dd`. |
+| `locale` | the browser's | Locale for month and day names, such as `en-GB`. |
+| `weekStartsOn` | the locale's | First day of the week, 0 (Sunday) to 6 (Saturday). |
+| `labels` | English | Text to translate; see `A11yDatePickerLabels`. |
+
+`(chosen)` emits the date as `yyyy-MM-dd` when the user chooses a day in the calendar.
+
+`parseDate(text, format)` and `formatDate(iso, format)` are exported for your own validators and for turning
+the field's text into a date. `parseDate` returns `yyyy-MM-dd`, or `null` if the text is not a real date.
+
+### Limits
+
+- Typed text is not validated for you, and `min` and `max` only limit the calendar. Add a validator that uses
+  `parseDate` so that a mistyped or out-of-range date is reported like any other error.
+- One date only: no ranges and no time.
+- The calendar opens below the input, at its start edge. It is not moved if there is no room there.
+- Customize colors with the `--a11y-date-picker-*` CSS variables (`bg`, `fg`, `border`, `selected-bg`,
+  `selected-fg`, `focus`, `radius`).
 
 ## Accessibility notes and limitations
 

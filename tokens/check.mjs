@@ -72,6 +72,11 @@ for (const [theme, tokens] of Object.entries(themes)) {
     ['error-summary.link on error-summary.bg', 'error-summary.link', 'error-summary.bg', text],
     ['error-summary.border on error-summary.bg', 'error-summary.border', 'error-summary.bg', ui],
     ['error-summary.focus on error-summary.bg', 'error-summary.focus', 'error-summary.bg', 3],
+    ['date-picker.fg on date-picker.bg', 'date-picker.fg', 'date-picker.bg', text],
+    ['date-picker.selected-fg on date-picker.selected-bg', 'date-picker.selected-fg', 'date-picker.selected-bg', text],
+    ['date-picker.selected-bg on date-picker.bg', 'date-picker.selected-bg', 'date-picker.bg', ui],
+    ['date-picker.border on date-picker.bg', 'date-picker.border', 'date-picker.bg', ui],
+    ['date-picker.focus on date-picker.bg', 'date-picker.focus', 'date-picker.bg', 3],
     ...statuses.flatMap((s) => [
       [`status.${s} on surface`, `color.status.${s}`, 'color.surface', ui],
       [`toast.${s} on toast.bg`, `toast.${s}`, 'toast.bg', ui],

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- **New: `<a11y-date-picker>`.** Adds a calendar dialog to a date field the user can also type in. It wraps your
+  own `<input>`, so it works with any kind of form. Keyboard support follows the WAI-ARIA date picker dialog
+  pattern. Supports `min` and `max`, a text `format`, locales, and translated labels. See "Date picker" in the
+  README. Tested with unit tests and axe; not yet tested by hand with screen readers.
 - **Fixed: a toast could time out while keyboard focus was inside it.** Moving the mouse over and off a toast
   restarted its timer even if focus was still in the toast. The timer now stays paused until both have left.
 - **Fixed: focus was lost when the app removed a focused toast.** `dismiss(id)` and `dismissAll()` now move focus

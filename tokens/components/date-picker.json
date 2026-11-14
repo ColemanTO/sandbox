@@ -1,0 +1,12 @@
+{
+  "$description": "Tier 3 - component tokens for <a11y-date-picker>. Map to the --a11y-date-picker-* CSS variables.",
+  "date-picker": {
+    "bg": { "$type": "color", "$value": "{color.surface}" },
+    "fg": { "$type": "color", "$value": "{color.on-surface}" },
+    "border": { "$type": "color", "$value": "{color.border}" },
+    "selected-bg": { "$type": "color", "$value": "{color.inverse-surface}" },
+    "selected-fg": { "$type": "color", "$value": "{color.inverse-on-surface}" },
+    "focus": { "$type": "color", "$value": "{color.focus-ring}" },
+    "radius": { "$type": "dimension", "$value": "{radius.sm}" }
+  }
+}
