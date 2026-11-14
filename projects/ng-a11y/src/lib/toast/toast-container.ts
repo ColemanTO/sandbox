@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, inject, input, viewChildren } from '@angular/core';
 import { A11yToastItem } from './toast-item';
 import { A11yToastService } from './toast.service';
 
@@ -59,6 +59,19 @@ export class A11yToastContainer {
   readonly label = input('Notifications');
 
   protected readonly service = inject(A11yToastService);
+  private readonly items = viewChildren(A11yToastItem);
+
+  constructor() {
+    // Toasts can be removed by a timer, by the user, or by the app calling dismiss() / dismissAll().
+    // Whichever it is, never remove one from under keyboard focus without moving focus somewhere first.
+    const rescueFocus = (ids: readonly number[]) => {
+      const items = this.items();
+      const staying = items.find((item) => !ids.includes(item.toast().id));
+      items.find((item) => ids.includes(item.toast().id) && item.hasFocus())?.moveFocusOut(staying);
+    };
+    this.service._beforeRemove.add(rescueFocus);
+    inject(DestroyRef).onDestroy(() => this.service._beforeRemove.delete(rescueFocus));
+  }
 
   protected onDismissed(id: number, reason: 'timeout' | 'user'): void {
     this.service.dismiss(id);

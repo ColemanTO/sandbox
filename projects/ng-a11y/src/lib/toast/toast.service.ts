@@ -53,6 +53,13 @@ export class A11yToastService {
   private readonly politeAnnouncer = new Announcer();
   private readonly assertiveAnnouncer = new Announcer();
 
+  /**
+   * Called with the ids of toasts that are about to be removed, while they are still in the DOM.
+   * The container uses it to move keyboard focus out of them first.
+   * @internal
+   */
+  readonly _beforeRemove = new Set<(ids: readonly number[]) => void>();
+
   readonly toasts = this._toasts.asReadonly();
   /** Text of the hidden polite live region. Written once per message. */
   readonly announcement = this.politeAnnouncer.text.asReadonly();
@@ -97,11 +104,17 @@ export class A11yToastService {
   }
 
   dismiss(id: number): void {
+    this.leaving([id]);
     this._toasts.update((list) => list.filter((t) => t.id !== id));
   }
 
   dismissAll(): void {
+    this.leaving(this._toasts().map((t) => t.id));
     this._toasts.set([]);
+  }
+
+  private leaving(ids: readonly number[]): void {
+    for (const hook of this._beforeRemove) hook(ids);
   }
 
   /**

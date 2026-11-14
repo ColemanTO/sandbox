@@ -84,21 +84,24 @@ export class A11yToastItem implements OnInit {
     this.remaining -= Date.now() - this.startedAt;
   }
 
-  protected resume(): void {
+  /** Restarts the timer, unless the pointer is over the toast or keyboard focus is still inside it. */
+  protected resume(focusIsLeaving = false): void {
     if (this.remaining <= 0 || this.timer !== undefined) return;
     if (this.el.nativeElement.matches(':hover')) return;
+    if (!focusIsLeaving && this.hasFocus()) return;
     this.startedAt = Date.now();
     this.timer = setTimeout(() => this.dismissed.emit('timeout'), this.remaining);
   }
 
   protected onFocusIn(event: FocusEvent): void {
     const from = event.relatedTarget as HTMLElement | null;
-    if (from && !this.el.nativeElement.contains(from)) this.previouslyFocused = from;
+    // The page body is not somewhere to go back to: focusing it is the same as losing focus.
+    if (from && from !== from.ownerDocument.body && !this.el.nativeElement.contains(from)) this.previouslyFocused = from;
     this.pause();
   }
 
   protected onFocusOut(event: FocusEvent): void {
-    if (!this.el.nativeElement.contains(event.relatedTarget as Node | null)) this.resume();
+    if (!this.el.nativeElement.contains(event.relatedTarget as Node | null)) this.resume(true);
   }
 
   protected runAction(handler: () => void): void {
@@ -107,23 +110,25 @@ export class A11yToastItem implements OnInit {
   }
 
   protected dismissByUser(): void {
-    this.restoreFocus();
-    this.dismissed.emit('user');
+    this.dismissed.emit('user'); // the container moves focus out before it removes this toast
+  }
+
+  /** Whether keyboard focus is inside this toast. */
+  hasFocus(): boolean {
+    const host = this.el.nativeElement;
+    return host.contains(host.ownerDocument.activeElement);
   }
 
   /**
-   * Removing the toast would drop focus to the page body and leave a screen reader silent.
-   * Move focus first: back to where the user came from, or else to another toast.
+   * Called by the container just before this toast is removed, however it is removed. Removing it with focus
+   * inside would drop focus to the page body and leave a screen reader silent, so move focus first: back to
+   * where the user came from, or else to a toast that is staying.
    */
-  private restoreFocus(): void {
-    const host = this.el.nativeElement;
-    if (!host.contains(host.ownerDocument.activeElement)) return; // focus is elsewhere, nothing to rescue
-    // The regions are the container's direct children; their parent holds every toast, whatever its host tag.
-    const container = host.closest('.a11y-toast-region')?.parentElement;
-    const other = Array.from(container?.querySelectorAll('a11y-toast-item') ?? [])
-      .find((item) => item !== host)
-      ?.querySelector('button');
-    const target = this.previouslyFocused?.isConnected ? this.previouslyFocused : other;
+  moveFocusOut(fallback?: A11yToastItem): void {
+    if (!this.hasFocus()) return; // focus is elsewhere, nothing to rescue
+    const target = this.previouslyFocused?.isConnected
+      ? this.previouslyFocused
+      : fallback?.el.nativeElement.querySelector('button');
     target?.focus();
   }
 }

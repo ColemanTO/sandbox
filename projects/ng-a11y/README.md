@@ -73,12 +73,13 @@ toast.info('Item deleted.', {
 - The visible toasts are ordinary content in a "Notifications" landmark that appears only while toasts are showing,
   so screen reader users can jump to them from the landmark list. Set the name with `<a11y-toast-container label="..." />`.
 - The type is announced as text ("Error: ...") and shown as an icon, never by color alone.
-- The timer pauses on hover and while keyboard focus is inside the toast
-  (WCAG 2.2.1 Timing Adjustable). Toasts with an action stay until dismissed; see below.
+- The timer pauses on hover and while keyboard focus is inside the toast, and stays paused until both have
+  left (WCAG 2.2.1 Timing Adjustable). Toasts with an action stay until dismissed; see below.
 - Escape or the close button dismisses a toast. Controls are at least 44x44px with a visible focus ring.
 - When a keyboard user dismisses a toast (close button, Escape, or an action), focus returns to where they
   were before they tabbed into the toast. Otherwise focus would drop to the page and a screen reader would
-  go silent. The dismissal is also announced ("Notification dismissed"). Toasts that time out are not
+  go silent. The same happens when your code removes a toast that has focus, with `dismiss(id)` or
+  `dismissAll()`. A dismissal by the user is also announced ("Notification dismissed"). Toasts that time out are not
   announced again, since they were announced when they appeared.
 - Honors `prefers-reduced-motion` and forced-colors mode.
 
@@ -199,6 +200,9 @@ export class SignUp {
 - A second failed submit moves focus to the summary again.
 - It judges the form as it was when submitted, before your `(ngSubmit)` handler runs. If you save and then
   `form.reset()`, the summary will not pop back up.
+- If an async validator is still running at submit, it waits. When validation finishes and the form is invalid,
+  the summary appears and takes focus then.
+- With `updateOn: 'submit'` it judges the values the user typed, which only reach the form during the submit.
 
 ### Messages
 
@@ -241,8 +245,27 @@ summary, not while the person is still typing. Don't rely on color alone to mark
 ### Limits
 
 - Reactive forms only. Template-driven forms and Signal Forms are not supported yet.
-- Fields are found by `formControlName`. For a custom control, put `formControlName` on an element that is, or
-  contains, something focusable.
+- Fields are found by `formControlName`, inside the `formGroupName` / `formArrayName` elements they sit in. For a
+  custom control, put `formControlName` on an element that is, or contains, something focusable.
+- **Bound names need a marker.** A name set with a binding, such as `[formControlName]="name"` or the usual
+  `[formGroupName]="i"` on the rows of a `FormArray`, leaves nothing in the page to find the field by. Mark those
+  fields with `data-a11y-field` and the control's dotted path:
+
+  ```html
+  <div formArrayName="addresses">
+    @for (row of addresses.controls; track row; let i = $index) {
+      <div [formGroupName]="i">
+        <input formControlName="street" [attr.data-a11y-field]="'addresses.' + i + '.street'" />
+      </div>
+    }
+  </div>
+  ```
+
+  Without the marker the entry still appears, as text without a link, and a warning is logged in development.
+  The summary never guesses, because a link to the wrong field is worse than no link.
+- A submit made while an async validator is running is only followed up if the user has changed the form
+  (it is not pristine). A pristine form at that point is taken to be one your code has just reset.
+- `updateOn: 'submit'` assumes your handler resets the form only after a successful save.
 - Errors set on a group as a whole (a cross-field validator such as "passwords must match") are not listed as
   separate entries. If that is the only problem, the summary shows the line "Check the form for errors". Reword
   it with the `$form` key in `messages`, and put the explanation next to the fields involved.

@@ -28,6 +28,7 @@ interface Invalid {
 }
 
 const FOCUSABLE = 'input, select, textarea, button, [tabindex]:not([tabindex="-1"])';
+const GROUP = '[formgroupname], [formarrayname]';
 let nextId = 0;
 
 /** Walks a form and returns every enabled leaf control that is invalid. Group-level errors are not listed. */
@@ -40,6 +41,14 @@ function collectInvalid(control: ErrorSummaryControl, path: string[] = [], out: 
   }
   if (control.invalid) out.push({ path, control });
   return out;
+}
+
+const hasProblems = (form: ErrorSummaryControl) => form.invalid || collectInvalid(form).length > 0;
+
+/** Whether any control only takes its value when the form is submitted (`updateOn: 'submit'`). */
+function updatesOnSubmit(control: ErrorSummaryControl): boolean {
+  if (control.updateOn === 'submit') return true;
+  return control.controls ? Object.values(control.controls).some(updatesOnSubmit) : false;
 }
 
 const attr = (value: string) => value.replace(/["\\]/g, '\\$&');
@@ -95,6 +104,10 @@ export class A11yErrorSummary {
   private readonly attempted = signal(false);
   private readonly tick = signal(0);
   private readonly warned = new Set<string>();
+  /** A submit happened while async validators were running; judge the form when they finish. */
+  private awaitingValidation = false;
+  /** Set while a submit event is being handled for a form whose values arrive on submit. */
+  private submitting: { invalidBefore: boolean; becameValid: boolean } | null = null;
 
   protected readonly entries = computed<Entry[]>(() => {
     this.tick(); // re-evaluate when the form's status changes or a submit is attempted
@@ -103,6 +116,7 @@ export class A11yErrorSummary {
     const messages = this.messages();
     const entries = collectInvalid(root).map(({ path, control }) => {
       const el = this.fieldFor(path);
+      if (!el) this.warnOnce(`field:${path.join('.')}`, `cannot find the field for "${path.join('.')}", so its entry is not a link. Its name is probably bound, as in [formControlName]="name" or [formGroupName]="i". Add data-a11y-field="${path.join('.')}" to the field.`);
       return { key: path.join('.'), path, el, message: this.messageFor(path, control, el, messages) };
     });
     // Keep the summary in the order the fields appear on the page.
@@ -122,7 +136,14 @@ export class A11yErrorSummary {
   constructor() {
     effect((onCleanup) => {
       const sub = this.form().statusChanges.subscribe(() => {
+        const form = this.form();
         this.tick.update((n) => n + 1);
+        if (this.submitting && form.valid) this.submitting.becameValid = true;
+        if (this.awaitingValidation && !form.pending) {
+          this.awaitingValidation = false;
+          // Pristine here means the app reset the form while validation ran; that is not a failed submit.
+          if (form.pristine !== true && hasProblems(form)) this.judge(true);
+        }
         // Everything is fixed: stay quiet until the next failed submit, even if a field is cleared later.
         if (this.attempted() && this.form().valid) this.attempted.set(false);
       });
@@ -143,11 +164,16 @@ export class A11yErrorSummary {
       const onSubmit = (event: Event) => {
         if (event.target === formEl) this.onSubmit();
       };
+      const onSubmitted = (event: Event) => {
+        if (event.target === formEl) this.onSubmitted();
+      };
       const onReset = () => this.clear();
       doc.addEventListener('submit', onSubmit, true);
+      doc.addEventListener('submit', onSubmitted);
       formEl.addEventListener('reset', onReset);
       this.destroyRef.onDestroy(() => {
         doc.removeEventListener('submit', onSubmit, true);
+        doc.removeEventListener('submit', onSubmitted);
         formEl.removeEventListener('reset', onReset);
       });
     });
@@ -156,13 +182,39 @@ export class A11yErrorSummary {
   /** Hides the summary until the next failed submit. Call it after a programmatic `form.reset()`. */
   clear(): void {
     this.attempted.set(false);
+    this.awaitingValidation = false;
   }
 
+  /** Runs before the form's own submit handling. */
   private onSubmit(): void {
-    const hasProblems = this.form().invalid || collectInvalid(this.form()).length > 0;
-    this.attempted.set(hasProblems); // a clean submit clears the summary, so a later form.reset() can't bring it back
+    const form = this.form();
+    this.awaitingValidation = false;
+    if (updatesOnSubmit(form)) {
+      // The values the user typed only reach the form during this event, so wait until it has been handled.
+      this.submitting = { invalidBefore: hasProblems(form), becameValid: false };
+      return;
+    }
+    this.submitting = null;
+    this.judge(hasProblems(form));
+  }
+
+  /** Runs after the form's own submit handling. Only needed for forms whose values arrive on submit. */
+  private onSubmitted(): void {
+    const state = this.submitting;
+    if (!state) return;
+    this.submitting = null;
+    const form = this.form();
+    // Pristine now means nothing was typed, or the app saved and reset the form. Then go by how the form
+    // was before the submit, unless it turned valid on the way (saved, then reset). Otherwise judge it as it is.
+    this.judge(form.pristine === true ? state.invalidBefore && !state.becameValid : hasProblems(form));
+  }
+
+  private judge(failed: boolean): void {
+    this.attempted.set(failed); // a clean submit clears the summary, so a later form.reset() can't bring it back
     this.tick.update((n) => n + 1);
-    if (hasProblems) this.focusSummary();
+    if (failed) this.focusSummary();
+    // An async validator is still running: it may yet fail, so look again when it finishes.
+    else if (this.form().pending) this.awaitingValidation = true;
   }
 
   private focusSummary(): void {
@@ -181,14 +233,36 @@ export class A11yErrorSummary {
     target?.focus();
   }
 
-  /** Finds the element for a control by its `formControlName`, inside any `formGroupName` it sits in. */
+  /**
+   * Finds the element for a control: one marked `data-a11y-field="<dotted path>"`, or else the element with its
+   * `formControlName` directly inside the `formGroupName` / `formArrayName` elements its path names. Returns
+   * null rather than guess, because a link to the wrong field is worse than no link.
+   */
   private fieldFor(path: string[]): HTMLElement | null {
-    if (!this.formEl || !path.length) return null;
-    let scope: ParentNode = this.formEl;
+    const form = this.formEl;
+    if (!form || !path.length) return null;
+    const marked = form.querySelector<HTMLElement>(`[data-a11y-field="${attr(path.join('.'))}"]`);
+    if (marked) return marked;
+    // The group an element belongs to: its nearest named group, or the form itself.
+    const groupOf = (el: Element): Element => {
+      const group = el.parentElement?.closest(GROUP);
+      return group && form.contains(group) ? group : form;
+    };
+    const within = (scope: Element, selector: string) =>
+      Array.from(scope.querySelectorAll<HTMLElement>(selector)).find((el) => groupOf(el) === scope) ?? null;
+    let scope: Element = form;
     for (const segment of path.slice(0, -1)) {
-      scope = scope.querySelector(`[formgroupname="${attr(segment)}"], [formarrayname="${attr(segment)}"]`) ?? scope;
+      const next = within(scope, `[formgroupname="${attr(segment)}"], [formarrayname="${attr(segment)}"]`);
+      if (!next) return null; // the group's name is bound, so it has no attribute to find it by
+      scope = next;
     }
-    return scope.querySelector<HTMLElement>(`[formcontrolname="${attr(path.at(-1)!)}"]`);
+    return within(scope, `[formcontrolname="${attr(path.at(-1)!)}"]`);
+  }
+
+  private warnOnce(key: string, message: string): void {
+    if (!isDevMode() || this.warned.has(key)) return;
+    this.warned.add(key);
+    console.warn(`<a11y-error-summary>: ${message}`);
   }
 
   private messageFor(path: string[], control: ErrorSummaryControl, el: HTMLElement | null, messages: ErrorMessages): string {
@@ -199,10 +273,7 @@ export class A11yErrorSummary {
     }
     const name = this.labelFor(el) ?? path.at(-1)!.replace(/[-_]/g, ' ');
     const key = path.join('.');
-    if (isDevMode() && !this.warned.has(key)) {
-      this.warned.add(key);
-      console.warn(`<a11y-error-summary>: no message for "${key}" (${Object.keys(control.errors ?? {}).join(', ')}). Add it to [messages].`);
-    }
+    this.warnOnce(key, `no message for "${key}" (${Object.keys(control.errors ?? {}).join(', ')}). Add it to [messages].`);
     return `Check ${name}`;
   }
 

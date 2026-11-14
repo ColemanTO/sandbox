@@ -218,6 +218,79 @@ describe('A11yToastContainer', () => {
       trigger.remove();
     });
 
+    it('does not restart the timer when the mouse leaves while keyboard focus is inside', () => {
+      service.info('Hello');
+      fixture.detectChanges();
+      const item = el().querySelector('a11y-toast-item') as HTMLElement;
+      (item.querySelector('.a11y-toast__close') as HTMLButtonElement).focus();
+      item.dispatchEvent(new FocusEvent('focusin'));
+      item.dispatchEvent(new MouseEvent('mouseenter'));
+      item.dispatchEvent(new MouseEvent('mouseleave'));
+      settle(10_000);
+      expect(el().querySelector('a11y-toast-item')).toBeTruthy();
+      // Once focus leaves too, the timer carries on.
+      (document.activeElement as HTMLElement).blur();
+      item.dispatchEvent(new FocusEvent('focusout'));
+      settle(10_000);
+      expect(el().querySelector('a11y-toast-item')).toBeNull();
+    });
+
+    describe('when the app removes a toast that has focus', () => {
+      let trigger: HTMLButtonElement;
+      beforeEach(() => {
+        trigger = document.createElement('button');
+        document.body.append(trigger);
+      });
+      afterEach(() => trigger.remove());
+
+      /** Shows a toast and tabs into it from the trigger. */
+      function focusToast(index = 0): HTMLElement {
+        fixture.detectChanges();
+        const item = el().querySelectorAll('a11y-toast-item')[index] as HTMLElement;
+        trigger.focus();
+        (item.querySelector('.a11y-toast__close') as HTMLButtonElement).focus();
+        item.dispatchEvent(new FocusEvent('focusin', { relatedTarget: trigger }));
+        return item;
+      }
+
+      it('dismiss(id) returns focus to where the user came from', () => {
+        const id = service.info('Hello', { duration: 0 });
+        focusToast();
+        service.dismiss(id);
+        fixture.detectChanges();
+        expect(document.activeElement).toBe(trigger);
+      });
+
+      it('dismissAll() returns focus to where the user came from', () => {
+        service.info('First', { duration: 0 });
+        service.info('Second', { duration: 0 });
+        focusToast(1);
+        service.dismissAll();
+        fixture.detectChanges();
+        expect(document.activeElement).toBe(trigger);
+      });
+
+      it('dismiss(id) moves focus to a toast that is staying when there is nowhere to go back to', () => {
+        const id = service.info('First', { duration: 0 });
+        service.info('Second', { duration: 0 });
+        fixture.detectChanges();
+        const [first, second] = Array.from(el().querySelectorAll('a11y-toast-item')) as HTMLElement[];
+        (first.querySelector('.a11y-toast__close') as HTMLButtonElement).focus();
+        service.dismiss(id);
+        fixture.detectChanges();
+        expect(document.activeElement).toBe(second.querySelector('button'));
+      });
+
+      it('leaves focus alone when it is not in the toast being removed', () => {
+        const id = service.info('Hello', { duration: 0 });
+        fixture.detectChanges();
+        trigger.focus();
+        service.dismiss(id);
+        fixture.detectChanges();
+        expect(document.activeElement).toBe(trigger);
+      });
+    });
+
     it('moves focus to another toast when there is nowhere to go back to', () => {
       service.info('First', { duration: 0 });
       service.info('Second', { duration: 0 });

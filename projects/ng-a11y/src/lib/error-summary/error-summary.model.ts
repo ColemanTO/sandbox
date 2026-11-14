@@ -23,6 +23,12 @@ export interface ErrorSummaryControl {
   readonly valid: boolean;
   readonly disabled: boolean;
   readonly errors: Record<string, unknown> | null;
+  /** True while an async validator is running. Optional: without it, async validators are not waited for. */
+  readonly pending?: boolean;
+  /** Optional. Used to tell a form the app has just reset from one the user filled in. */
+  readonly pristine?: boolean;
+  /** Optional. `'submit'` means values only reach the form when it is submitted. */
+  readonly updateOn?: string;
   readonly controls?: Record<string, ErrorSummaryControl> | readonly ErrorSummaryControl[];
   readonly statusChanges: Observable<unknown>;
 }
