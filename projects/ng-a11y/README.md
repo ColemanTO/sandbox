@@ -2,6 +2,9 @@
 
 Accessible Angular components. Currently: a toast / snackbar, a form error summary and a date picker.
 
+**[See the components in Storybook](https://demos.coleman-creative.com/ng-a11y/)**: live examples with docs, controls,
+theme switching and an accessibility check.
+
 - Standalone components, signals, `OnPush`. Angular 22+.
 - Tested with unit tests, axe-core, and Playwright in Chromium and WebKit.
 - No dependencies beyond Angular.

@@ -46,7 +46,8 @@ ng test
 
 ## Storybook
 
-The library's components are shown in Storybook, each with its docs, controls and an accessibility check:
+The library's components are shown in Storybook, each with its docs, controls and an accessibility check. The
+published copy is at <https://demos.coleman-creative.com/ng-a11y/>. To run it locally:
 
 ```bash
 npm run storybook        # dev server on http://localhost:6006
