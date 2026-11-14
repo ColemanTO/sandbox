@@ -1,0 +1,100 @@
+name: Deploy Storybook
+
+# Publishes the Storybook static site to the demos site over SSH, into its own "ng-a11y" folder.
+# Runs on every push to main, or by hand from the Actions tab. See RELEASING.md for the one-time setup.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions: {}
+
+# One deploy at a time; a newer one waits rather than cutting off an upload half way.
+concurrency:
+  group: deploy-storybook
+  cancel-in-progress: false
+
+jobs:
+  test:
+    uses: ./.github/workflows/ci.yml
+    permissions:
+      contents: read
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: demos
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      # Builds the design tokens first, then the static site into dist/storybook/sandbox.
+      - name: Build Storybook
+        run: npm run build-storybook
+
+      # The site goes into DEPLOY_PATH/ng-a11y, never DEPLOY_PATH itself. Other demos live next to it, and
+      # --delete only ever removes old files inside that one folder.
+      #
+      # Uses the runner's own rsync and OpenSSH rather than an action, as the host needs a key exchange that
+      # some SSH libraries lack. The host sometimes refuses a connection made soon after another, so the
+      # upload is retried; rsync only sends what still differs, so running it again is safe.
+      - name: Upload over SSH
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          set -eu
+          for name in SSH_HOST SSH_PORT SSH_USER SSH_PRIVATE_KEY DEPLOY_PATH; do
+            if [ -z "$(printenv "$name")" ]; then
+              echo "::error::Secret $name is not set in the 'demos' environment. See RELEASING.md."
+              exit 1
+            fi
+          done
+          case "$DEPLOY_PATH" in
+            /*) ;;
+            *) echo "::error::DEPLOY_PATH must be an absolute path to the demos site's folder."; exit 1 ;;
+          esac
+          test -f dist/storybook/sandbox/index.html
+
+          umask 077
+          KEY_FILE="$RUNNER_TEMP/deploy_key"
+          trap 'rm -f "$KEY_FILE"' EXIT
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$KEY_FILE"
+
+          TARGET="${DEPLOY_PATH%/}/ng-a11y"
+          SSH="ssh -i $KEY_FILE -p $SSH_PORT -o StrictHostKeyChecking=accept-new -o BatchMode=yes -o ConnectTimeout=15"
+
+          uploaded=false
+          for attempt in 1 2 3; do
+            if rsync -az --delete -e "$SSH" dist/storybook/sandbox/ "$SSH_USER@$SSH_HOST:$TARGET/"; then
+              uploaded=true
+              break
+            fi
+            echo "::warning::Upload attempt $attempt of 3 failed"
+            if [ "$attempt" -lt 3 ]; then sleep 60; fi
+          done
+          if [ "$uploaded" != true ]; then exit 1; fi
+
+          # Confirm the files landed. Checked over SSH, as the public URL may sit behind bot protection.
+          for attempt in 1 2 3; do
+            status=0
+            $SSH "$SSH_USER@$SSH_HOST" "test -f '$TARGET/index.html' && test -f '$TARGET/iframe.html'" || status=$?
+            if [ "$status" -ne 255 ]; then exit "$status"; fi # 255 is a failed connection; anything else is the check's result
+            echo "SSH connection failed (attempt $attempt of 3)"
+            if [ "$attempt" -lt 3 ]; then sleep 5; fi
+          done
+          exit 255
