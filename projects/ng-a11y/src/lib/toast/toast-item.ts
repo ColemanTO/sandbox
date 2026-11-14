@@ -10,6 +10,9 @@ import {
 } from '@angular/core';
 import { TOAST_TYPE_LABEL, Toast } from './toast.model';
 
+/** Toasts by host element, so one toast can ask another where the user came from. */
+const ITEMS = new WeakMap<Element, A11yToastItem>();
+
 /**
  * A single toast. Pauses its timer while hovered or while focus is inside it,
  * and can be dismissed with the close button or the Escape key.
@@ -72,6 +75,7 @@ export class A11yToastItem implements OnInit {
   protected label = () => TOAST_TYPE_LABEL[this.toast().type];
 
   ngOnInit(): void {
+    ITEMS.set(this.el.nativeElement, this);
     this.remaining = this.toast().duration;
     this.resume();
     this.destroyRef.onDestroy(() => clearTimeout(this.timer));
@@ -96,7 +100,13 @@ export class A11yToastItem implements OnInit {
   protected onFocusIn(event: FocusEvent): void {
     const from = event.relatedTarget as HTMLElement | null;
     // The page body is not somewhere to go back to: focusing it is the same as losing focus.
-    if (from && from !== from.ownerDocument.body && !this.el.nativeElement.contains(from)) this.previouslyFocused = from;
+    if (from && from !== from.ownerDocument.body && !this.el.nativeElement.contains(from)) {
+      // Another toast is not somewhere to go back to either, as it may be removed first or along with this
+      // one. Focus that arrives from a toast goes back to wherever the user was before that toast.
+      const toast = from.closest('a11y-toast-item');
+      const origin = toast ? (ITEMS.get(toast)?.previouslyFocused ?? null) : from;
+      if (origin?.isConnected) this.previouslyFocused = origin;
+    }
     this.pause();
   }
 
@@ -110,7 +120,10 @@ export class A11yToastItem implements OnInit {
   }
 
   protected dismissByUser(): void {
-    this.dismissed.emit('user'); // the container moves focus out before it removes this toast
+    // Go back to where the user came from before this toast is removed. With nowhere to go back to, focus
+    // stays here and the container moves it to a toast that is staying.
+    this.moveFocusOut();
+    this.dismissed.emit('user');
   }
 
   /** Whether keyboard focus is inside this toast. */
@@ -120,7 +133,7 @@ export class A11yToastItem implements OnInit {
   }
 
   /**
-   * Called by the container just before this toast is removed, however it is removed. Removing it with focus
+   * Called just before this toast is removed, however it is removed. Removing it with focus
    * inside would drop focus to the page body and leave a screen reader silent, so move focus first: back to
    * where the user came from, or else to a toast that is staying.
    */

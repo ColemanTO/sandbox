@@ -7,12 +7,16 @@
 - **Fixed: focus was lost when the app removed a focused toast.** `dismiss(id)` and `dismissAll()` now move focus
   back to where the user came from (or to a toast that is staying) before the toast is removed, as the close
   button, Escape and actions already did.
+  Focus that reached a toast from another toast goes back to the page, not to that other toast.
 - **Fixed: error summary links could go to the wrong field.** In a `FormArray`, or anywhere a group name is bound
   (`[formGroupName]="i"`), every row's entry linked to the first field with that name. The summary now only links
   to a field it can identify. Mark fields whose names are bound with `data-a11y-field="<dotted path>"`; without
   it the entry is shown as text and a warning is logged in development. See "Limits" in the README.
+  A group with no element of its own (`<ng-container formGroupName>`) still links, as it did in 0.4.0, unless
+  another field there has the same name. Entries that are not links keep their place in the list.
 - **Fixed: error summary and async validators.** A submit made while an async validator was still running showed
-  nothing, even if validation then failed. The summary now appears, and takes focus, when validation finishes.
+  nothing, even if validation then failed. The summary now appears, and takes focus, when that validator
+  finishes. Editing another field in the meantime does not bring the summary up early.
 - **Fixed: error summary and `updateOn: 'submit'`.** The form was judged on the values from before the submit.
   It is now judged on what the user typed.
 

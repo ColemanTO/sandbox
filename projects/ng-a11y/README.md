@@ -262,9 +262,12 @@ summary, not while the person is still typing. Don't rely on color alone to mark
   ```
 
   Without the marker the entry still appears, as text without a link, and a warning is logged in development.
-  The summary never guesses, because a link to the wrong field is worse than no link.
-- A submit made while an async validator is running is only followed up if the user has changed the form
-  (it is not pristine). A pristine form at that point is taken to be one your code has just reset.
+  The summary does not guess between fields, because a link to the wrong field is worse than no link. A group
+  with no element of its own, such as `<ng-container formGroupName="address">` or a single bound-name group,
+  still links as long as no other field around it has the same `formControlName`.
+- A submit made while an async validator is running is judged when that validator finishes, on the fields it
+  was checking. If your code resets the form in the meantime, call `clear()`; a form that was edited before the
+  submit and is pristine afterwards is taken to have been reset.
 - `updateOn: 'submit'` assumes your handler resets the form only after a successful save.
 - Errors set on a group as a whole (a cross-field validator such as "passwords must match") are not listed as
   separate entries. If that is the only problem, the summary shows the line "Check the form for errors". Reword

@@ -1,4 +1,4 @@
-import { Injectable, computed, signal } from '@angular/core';
+import { Injectable, computed, signal, untracked } from '@angular/core';
 import { DEFAULT_TOAST_DURATION, TOAST_TYPE_LABEL, Toast, ToastConfig } from './toast.model';
 
 const WRITE_DELAY = 50; // clear first, write on a later tick, so repeating a message still counts as a change
@@ -109,12 +109,16 @@ export class A11yToastService {
   }
 
   dismissAll(): void {
-    this.leaving(this._toasts().map((t) => t.id));
+    this.leaving(untracked(this._toasts).map((t) => t.id));
     this._toasts.set([]);
   }
 
   private leaving(ids: readonly number[]): void {
-    for (const hook of this._beforeRemove) hook(ids);
+    // Untracked, so an effect that dismisses toasts does not come to depend on the toast list and re-run
+    // (dismissing again) every time a toast is shown.
+    untracked(() => {
+      for (const hook of this._beforeRemove) hook(ids);
+    });
   }
 
   /**

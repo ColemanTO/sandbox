@@ -51,6 +51,14 @@ function updatesOnSubmit(control: ErrorSummaryControl): boolean {
   return control.controls ? Object.values(control.controls).some(updatesOnSubmit) : false;
 }
 
+/** Every enabled leaf control whose async validator is still running. */
+function collectPending(control: ErrorSummaryControl, out: ErrorSummaryControl[] = []): ErrorSummaryControl[] {
+  if (control.disabled) return out;
+  if (control.controls) for (const child of Object.values(control.controls)) collectPending(child, out);
+  else if (control.pending) out.push(control);
+  return out;
+}
+
 const attr = (value: string) => value.replace(/["\\]/g, '\\$&');
 
 /**
@@ -104,8 +112,12 @@ export class A11yErrorSummary {
   private readonly attempted = signal(false);
   private readonly tick = signal(0);
   private readonly warned = new Set<string>();
-  /** A submit happened while async validators were running; judge the form when they finish. */
-  private awaitingValidation = false;
+  /**
+   * A submit happened while async validators were running; judge it when they finish. `controls` are the
+   * fields that were being validated (empty when only a group-level validator was running), and `pristine`
+   * is whether the form was untouched when it was submitted.
+   */
+  private awaiting: { controls: ErrorSummaryControl[]; pristine: boolean } | null = null;
   /** Set while a submit event is being handled for a form whose values arrive on submit. */
   private submitting: { invalidBefore: boolean; becameValid: boolean } | null = null;
 
@@ -116,14 +128,16 @@ export class A11yErrorSummary {
     const messages = this.messages();
     const entries = collectInvalid(root).map(({ path, control }) => {
       const el = this.fieldFor(path);
-      if (!el) this.warnOnce(`field:${path.join('.')}`, `cannot find the field for "${path.join('.')}", so its entry is not a link. Its name is probably bound, as in [formControlName]="name" or [formGroupName]="i". Add data-a11y-field="${path.join('.')}" to the field.`);
+      if (!el) this.warnOnce(`field:${path.join('.')}`, `cannot tell which field belongs to "${path.join('.')}", so its entry is not a link. Either its name is bound, as in [formControlName]="name", or a group around it has no name attribute to find it by, as in [formGroupName]="i", and another field there has the same name. Add data-a11y-field="${path.join('.')}" to the field.`);
       return { key: path.join('.'), path, el, message: this.messageFor(path, control, el, messages) };
     });
-    // Keep the summary in the order the fields appear on the page.
-    entries.sort((a, b) => {
-      if (!a.el || !b.el) return 0;
-      return a.el.compareDocumentPosition(b.el) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1;
-    });
+    // Keep the summary in the order the fields appear on the page. Entries without an element cannot be
+    // compared, so they keep their place in the list and the linked entries are ordered around them.
+    const linked = entries
+      .filter((entry) => entry.el)
+      .sort((a, b) => (a.el!.compareDocumentPosition(b.el!) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1));
+    let next = 0;
+    for (let i = 0; i < entries.length; i++) if (entries[i].el) entries[i] = linked[next++];
     if (!entries.length && root.invalid) {
       const custom = messages['$form'];
       entries.push({ key: '$form', path: [], el: null, message: typeof custom === 'string' ? custom : 'Check the form for errors' });
@@ -139,11 +153,7 @@ export class A11yErrorSummary {
         const form = this.form();
         this.tick.update((n) => n + 1);
         if (this.submitting && form.valid) this.submitting.becameValid = true;
-        if (this.awaitingValidation && !form.pending) {
-          this.awaitingValidation = false;
-          // Pristine here means the app reset the form while validation ran; that is not a failed submit.
-          if (form.pristine !== true && hasProblems(form)) this.judge(true);
-        }
+        this.settleAwaited(form);
         // Everything is fixed: stay quiet until the next failed submit, even if a field is cleared later.
         if (this.attempted() && this.form().valid) this.attempted.set(false);
       });
@@ -168,6 +178,7 @@ export class A11yErrorSummary {
         if (event.target === formEl) this.onSubmitted();
       };
       const onReset = () => this.clear();
+      // The second listener runs after the form's own handlers, once the event has bubbled to the document.
       doc.addEventListener('submit', onSubmit, true);
       doc.addEventListener('submit', onSubmitted);
       formEl.addEventListener('reset', onReset);
@@ -182,16 +193,36 @@ export class A11yErrorSummary {
   /** Hides the summary until the next failed submit. Call it after a programmatic `form.reset()`. */
   clear(): void {
     this.attempted.set(false);
-    this.awaitingValidation = false;
+    this.awaiting = null;
+  }
+
+  /** Judges a submit that was made while async validators were running, once they have finished. */
+  private settleAwaited(form: ErrorSummaryControl): void {
+    const waiting = this.awaiting;
+    if (!waiting) return;
+    // Wait for the validators that were running at the submit, and judge only what they found. The form's
+    // own status is no guide here: it also changes when the user goes on to edit some other field, and that
+    // must not pull focus into the summary. With no field to watch (a group-level validator), use the form.
+    const fields = waiting.controls;
+    if (fields.length ? fields.some((c) => c.pending) : form.pending) return;
+    this.awaiting = null;
+    // A form that was dirty at the submit and is pristine now was reset by the app; that is not a failed submit.
+    if (form.pristine === true && !waiting.pristine) return;
+    if (fields.length ? fields.some((c) => !c.disabled && c.invalid) : hasProblems(form)) this.judge(true);
   }
 
   /** Runs before the form's own submit handling. */
   private onSubmit(): void {
     const form = this.form();
-    this.awaitingValidation = false;
+    this.awaiting = null;
     if (updatesOnSubmit(form)) {
       // The values the user typed only reach the form during this event, so wait until it has been handled.
-      this.submitting = { invalidBefore: hasProblems(form), becameValid: false };
+      const state = (this.submitting = { invalidBefore: hasProblems(form), becameValid: false });
+      // Normally onSubmitted() runs when the event reaches the document. If something stops the event on
+      // the way, judge the form on the next task instead.
+      setTimeout(() => {
+        if (this.submitting === state) this.onSubmitted();
+      });
       return;
     }
     this.submitting = null;
@@ -214,7 +245,9 @@ export class A11yErrorSummary {
     this.tick.update((n) => n + 1);
     if (failed) this.focusSummary();
     // An async validator is still running: it may yet fail, so look again when it finishes.
-    else if (this.form().pending) this.awaitingValidation = true;
+    else if (this.form().pending) {
+      this.awaiting = { controls: collectPending(this.form()), pristine: this.form().pristine === true };
+    }
   }
 
   private focusSummary(): void {
@@ -235,8 +268,10 @@ export class A11yErrorSummary {
 
   /**
    * Finds the element for a control: one marked `data-a11y-field="<dotted path>"`, or else the element with its
-   * `formControlName` directly inside the `formGroupName` / `formArrayName` elements its path names. Returns
-   * null rather than guess, because a link to the wrong field is worse than no link.
+   * `formControlName` directly inside the `formGroupName` / `formArrayName` elements its path names. A group
+   * with no element of its own (a bound name, or an `<ng-container>`) is looked through, and the field is
+   * then only used if it is the only one with that name there. Returns null rather than guess, because a
+   * link to the wrong field is worse than no link.
    */
   private fieldFor(path: string[]): HTMLElement | null {
     const form = this.formEl;
@@ -249,14 +284,18 @@ export class A11yErrorSummary {
       return group && form.contains(group) ? group : form;
     };
     const within = (scope: Element, selector: string) =>
-      Array.from(scope.querySelectorAll<HTMLElement>(selector)).find((el) => groupOf(el) === scope) ?? null;
+      Array.from(scope.querySelectorAll<HTMLElement>(selector)).filter((el) => groupOf(el) === scope);
     let scope: Element = form;
     for (const segment of path.slice(0, -1)) {
-      const next = within(scope, `[formgroupname="${attr(segment)}"], [formarrayname="${attr(segment)}"]`);
-      if (!next) return null; // the group's name is bound, so it has no attribute to find it by
-      scope = next;
+      // No element: the group's name is bound, or it sits on an <ng-container>. Its fields are then found
+      // from the enclosing group, where the check below refuses any name that is not unique.
+      scope = within(scope, `[formgroupname="${attr(segment)}"], [formarrayname="${attr(segment)}"]`)[0] ?? scope;
     }
-    return within(scope, `[formcontrolname="${attr(path.at(-1)!)}"]`);
+    const fields = within(scope, `[formcontrolname="${attr(path.at(-1)!)}"]`);
+    // Several elements with one name are one control only when they are its radio buttons. Otherwise they
+    // belong to different groups that cannot be told apart, such as the rows of [formGroupName]="i".
+    const one = fields.length === 1 || (fields.length > 1 && fields.every((el) => el.matches('input[type="radio"]')));
+    return one ? fields[0] : null;
   }
 
   private warnOnce(key: string, message: string): void {

@@ -103,15 +103,78 @@ describe('A11yErrorSummary with bound control names', () => {
   imports: [ReactiveFormsModule, A11yErrorSummary],
   template: `
     <form [formGroup]="form" novalidate>
-      <a11y-error-summary [form]="form" [messages]="{ name: 'That name is taken' }" />
+      <a11y-error-summary [form]="form" [messages]="{ street: 'Enter a street', city: 'Enter a city', color: 'Pick a color' }" />
+      <ng-container formGroupName="address">
+        <input id="street" formControlName="street" />
+      </ng-container>
+      <div [formGroupName]="bound">
+        <input id="other-city" formControlName="city" />
+      </div>
+      <input id="city" formControlName="city" />
+      <input id="red" type="radio" value="red" formControlName="color" />
+      <input id="blue" type="radio" value="blue" formControlName="color" />
+    </form>
+  `,
+})
+class LooseGroupHost {
+  bound = 'other';
+  form = new FormGroup({
+    address: new FormGroup({ street: new FormControl('', Validators.required) }),
+    other: new FormGroup({ city: new FormControl('x') }),
+    city: new FormControl('', Validators.required),
+    color: new FormControl('', Validators.required),
+  });
+}
+
+describe('A11yErrorSummary with groups that have no element or name attribute', () => {
+  let warn: ReturnType<typeof vi.spyOn>;
+  beforeEach(() => (warn = vi.spyOn(console, 'warn').mockImplementation(() => {})));
+  afterEach(() => warn.mockRestore());
+  const href = (f: ComponentFixture<unknown>, text: string) =>
+    items(f).find((li) => li.textContent!.trim() === text)!.querySelector('a')?.getAttribute('href') ?? null;
+
+  it('links a field inside <ng-container formGroupName>', async () => {
+    const fixture = await create(LooseGroupHost);
+    await submit(fixture);
+    expect(href(fixture, 'Enter a street')).toBe('#street');
+  });
+
+  it('does not link when a field in a bound-name group has the same name', async () => {
+    const fixture = await create(LooseGroupHost);
+    await submit(fixture);
+    expect(href(fixture, 'Enter a city')).toBeNull(); // #other-city comes first and is the wrong field
+  });
+
+  it('links a radio group to its first button', async () => {
+    const fixture = await create(LooseGroupHost);
+    await submit(fixture);
+    expect(href(fixture, 'Pick a color')).toBe('#red');
+  });
+
+  it('keeps linked entries in page order around entries that are not links', async () => {
+    const fixture = await create(LooseGroupHost);
+    await submit(fixture);
+    expect(texts(fixture)).toEqual(['Enter a street', 'Enter a city', 'Pick a color']);
+  });
+});
+
+@Component({
+  imports: [ReactiveFormsModule, A11yErrorSummary],
+  template: `
+    <form [formGroup]="form" novalidate>
+      <a11y-error-summary [form]="form" [messages]="{ name: 'That name is taken', email: 'Enter an email' }" />
       <input id="name" formControlName="name" />
+      <input id="email" formControlName="email" />
     </form>
   `,
 })
 class AsyncHost {
   finish!: (taken: boolean) => void;
   check: AsyncValidatorFn = () => new Promise((resolve) => (this.finish = (taken) => resolve(taken ? { taken: true } : null)));
-  form = new FormGroup({ name: new FormControl('', { asyncValidators: this.check }) });
+  form = new FormGroup({
+    name: new FormControl('', { asyncValidators: this.check }),
+    email: new FormControl('a@b.c', Validators.required),
+  });
 }
 
 describe('A11yErrorSummary with an async validator', () => {
@@ -140,6 +203,34 @@ describe('A11yErrorSummary with an async validator', () => {
     await fixture.whenStable();
     fixture.detectChanges();
     expect(group(fixture)).toBeNull();
+  });
+
+  it('does not take focus when the user edits another field while validation is running', async () => {
+    const fixture = await submitWhilePending();
+    const email = fixture.nativeElement.querySelector('#email') as HTMLInputElement;
+    email.focus();
+    type(fixture, '#email', ''); // briefly invalid, and the form is no longer "pending"
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(group(fixture)).toBeNull();
+    expect(document.activeElement).toBe(email);
+    type(fixture, '#email', 'x@y.z');
+    fixture.componentInstance.finish(false);
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(group(fixture)).toBeNull();
+  });
+
+  it('shows the summary when an untouched, pre-filled form fails validation after the submit', async () => {
+    const fixture = await create(AsyncHost);
+    fixture.componentInstance.form.controls.name.setValue('tom'); // set by the app: pending, and still pristine
+    expect(fixture.componentInstance.form.pristine).toBe(true);
+    await submit(fixture);
+    fixture.componentInstance.finish(true);
+    await fixture.whenStable();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(texts(fixture)).toEqual(['That name is taken']);
   });
 
   it('does not appear when validation that finished before any submit fails', async () => {
@@ -182,6 +273,17 @@ describe("A11yErrorSummary with updateOn: 'submit'", () => {
     await submit(fixture);
     expect(texts(fixture)).toEqual(['Enter your email']);
     expect(document.activeElement).toBe(group(fixture));
+  });
+
+  it('still judges the form when the submit event is stopped before it reaches the document', async () => {
+    const fixture = await create(SubmitHost);
+    const form = fixture.nativeElement.querySelector('form') as HTMLFormElement;
+    form.addEventListener('submit', (event) => event.stopPropagation());
+    await submit(fixture);
+    await new Promise((resolve) => setTimeout(resolve));
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(group(fixture)).not.toBeNull();
   });
 
   it('shows the summary for an untouched form', async () => {

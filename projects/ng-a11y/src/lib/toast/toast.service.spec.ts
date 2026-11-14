@@ -1,3 +1,4 @@
+import { effect } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { A11yToastService } from './toast.service';
 
@@ -34,6 +35,21 @@ describe('A11yToastService', () => {
     expect(service.toasts().map((t) => t.message)).toEqual(['B']);
     service.dismissAll();
     expect(service.toasts()).toEqual([]);
+  });
+
+  it('does not make an effect that dismisses toasts depend on the toast list', () => {
+    let runs = 0;
+    TestBed.runInInjectionContext(() =>
+      effect(() => {
+        runs++;
+        service.dismissAll();
+      }),
+    );
+    TestBed.tick();
+    service.info('Hello');
+    TestBed.tick();
+    expect(runs).toBe(1);
+    expect(service.toasts()).toHaveLength(1);
   });
 
   describe('duration defaults', () => {

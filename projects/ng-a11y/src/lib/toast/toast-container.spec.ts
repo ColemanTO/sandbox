@@ -281,6 +281,34 @@ describe('A11yToastContainer', () => {
         expect(document.activeElement).toBe(second.querySelector('button'));
       });
 
+      /** Tabs from the first toast into the second, after tabbing into the first from the trigger. */
+      function tabThroughBoth(): HTMLElement[] {
+        const first = focusToast(0);
+        const second = el().querySelectorAll('a11y-toast-item')[1] as HTMLElement;
+        const from = first.querySelector('.a11y-toast__close') as HTMLButtonElement;
+        (second.querySelector('.a11y-toast__close') as HTMLButtonElement).focus();
+        second.dispatchEvent(new FocusEvent('focusin', { relatedTarget: from }));
+        return [first, second];
+      }
+
+      it('dismissAll() goes back to the page, not to another toast, after tabbing from toast to toast', () => {
+        service.info('First', { duration: 0 });
+        service.info('Second', { duration: 0 });
+        tabThroughBoth();
+        service.dismissAll();
+        fixture.detectChanges();
+        expect(document.activeElement).toBe(trigger);
+      });
+
+      it('dismiss(id) goes back to the page after tabbing from toast to toast', () => {
+        service.info('First', { duration: 0 });
+        const id = service.info('Second', { duration: 0 });
+        tabThroughBoth();
+        service.dismiss(id);
+        fixture.detectChanges();
+        expect(document.activeElement).toBe(trigger);
+      });
+
       it('leaves focus alone when it is not in the toast being removed', () => {
         const id = service.info('Hello', { duration: 0 });
         fixture.detectChanges();
