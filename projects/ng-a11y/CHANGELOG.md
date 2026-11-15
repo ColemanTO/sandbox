@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.1
+
+- **Docs: a "Found a bug?" link.** The README and the Storybook introduction now link to the GitHub issues
+  page. No code changes.
+
 ## 0.5.0
 
 - **New: Storybook.** Live examples of every component, with docs, controls and theme switching, at
