@@ -5,6 +5,9 @@ Accessible Angular components. Currently: a toast / snackbar, a form error summa
 **[See the components in Storybook](https://demos.coleman-creative.com/ng-a11y/)**: live examples with docs, controls,
 theme switching and an accessibility check.
 
+**Found a bug?** [Open an issue on GitHub](https://github.com/ColemanTO/sandbox/issues) and say which screen
+reader, browser and operating system you used.
+
 - Standalone components, signals, `OnPush`. Angular 22+.
 - Tested with unit tests, axe-core, and Playwright in Chromium and WebKit.
 - No dependencies beyond Angular.
