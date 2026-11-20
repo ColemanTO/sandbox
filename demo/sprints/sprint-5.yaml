@@ -1,0 +1,48 @@
+# Drafted from the 0.5.0 release notes (projects/ng-a11y/CHANGELOG.md). There is no tracker yet, so the IDs are
+# local. Format: .claude/skills/sprint-demo/references/stories-format.md
+sprint: 5
+name: Sprint 5
+goal: A keyboard-friendly date picker, a public Storybook, and toast focus fixes
+app: http://localhost:6006/ # Storybook: the demo app has no date picker, and Storybook shows every component
+
+stories:
+  - id: NGA-1
+    title: Choose a date from a calendar
+    status: Done
+    acceptance:
+      - The calendar button opens a calendar with today's date in focus
+      - Arrow keys move by day and week, and Enter fills in the chosen date
+      - Escape closes the calendar without changing the date
+      - A date can still be typed straight into the field, and the calendar opens on it
+      - Days outside the allowed range are struck through and can't be chosen
+
+  - id: NGA-2
+    title: Browse the components in Storybook
+    status: Done
+    acceptance:
+      - Each component has a docs page with live examples and controls
+      - The paintbrush in the toolbar switches the theme
+    notes: Published at demos.coleman-creative.com/ng-a11y; the demo uses a local copy
+
+  - id: NGA-3
+    title: A toast stays while keyboard focus is in it
+    status: Done
+    acceptance:
+      - With focus in a toast, moving the mouse over it and away does not restart its timer
+      - Escape dismisses the toast and puts focus back on the page
+
+  - id: NGA-4
+    title: Focus is kept when the app removes a focused toast
+    status: Done
+    acceptance:
+      - dismiss(id) and dismissAll() move focus back to where the user came from before removing the toast
+    notes: Triggered by app code, not by a control on screen, so it is covered by unit tests rather than the demo
+
+  - id: NGA-5
+    title: Error summary fixes for form arrays, async validators and submit-time updates
+    status: Done
+    acceptance:
+      - In a FormArray, each entry links to its own row's field
+      - A submit made while an async validator runs shows the summary when it fails
+      - With updateOn submit, the form is judged on what the user typed
+    notes: None of these cases appear in the demo app or Storybook yet, so they are covered by unit and e2e tests
